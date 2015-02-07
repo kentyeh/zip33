@@ -3,7 +3,6 @@ package twzip.context;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.nio.channels.Channels;
@@ -257,7 +256,6 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
                 Pattern pLbrackets = Pattern.compile("[(\\x{FF08}]");
                 Pattern pRbrackets = Pattern.compile("[)\\x{FF09}]");
                 Pattern pDecimalHead = Pattern.compile("^\\d.*");
-                Pattern pLi = Pattern.compile("(\\P{M}{2,}[\\x{91CC}\\x{6751}])[^\\x{8857}]\\p{InCJKUnifiedIdeographs}{2,}");//[里村][^街]
                 //</editor-fold>
                 String strLine;
                 int ra = 0;
@@ -265,81 +263,56 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
                 while ((strLine = br.readLine()) != null) {
                     Post5 post = new Post5();
                     post.setZipcode(strLine.substring(0, 5));
+                    post.setOriInfo(pSpacies.matcher(strLine.substring(5, 24)).replaceAll(""));
                     post.setCity(pTai.matcher(strLine.substring(5, 8)).replaceAll("台"));
-                    String oriInfo = strLine.substring(5, 8);
-                    strLine = strLine.substring(8);
-                    String build = "";
-                    Matcher m = pa.matcher(strLine);
-                    if (m.find()) {
-                        //"xx[區鄉台市鎮島]"不會超過4個字, 為避免新市區、前鎮區、左鎮區、平鎮區、綠島鄉的問題，卻又遇上"太麻里鄉市隆路"
-                        String area = m.end(1) > 4 ? strLine.substring(0, 4) : strLine.substring(0, m.end(1));
-                        oriInfo += area;
-                        post.setArea(Address.normailize(pTai.matcher(area).replaceAll("台")));
-                        strLine = strLine.substring(m.end(1) > 4 ? 4 : m.end(1)).trim();
-                        m = pSpacies.matcher(strLine);
-                        if (m.find()) {
-                            oriInfo += strLine.substring(0, m.start());
-                            post.setAddrinfo(Address.normailize(strLine.substring(0, m.start())));
-                            post.setTailInfo(pSpacies.matcher(strLine.substring(m.end())).replaceAll(""));
-                            if (pDecimalHead.matcher(post.getTailInfo()).matches()) {
-                                post.setTailInfo("　" + post.getTailInfo());
-                            }
-                            m = pLbrackets.matcher(post.getTailInfo());
-                            if (m.find()) {
-                                build = pRbrackets.matcher(post.getTailInfo().substring(m.start() + 1)).replaceAll("");
-                                post.setTailInfo(post.getTailInfo().substring(0, m.start()));
-                            }
-                        } else {
-                            if (strLine.endsWith("全")) {
-                                oriInfo += strLine.substring(0, strLine.length() - 1);
-                                post.setAddrinfo(Address.normailize(strLine.substring(0, strLine.length() - 1)));
-                                post.setTailInfo("全");
-                            } else {
-                                logger.error("無法處理:{}{}{}", post.getCity(), area, strLine);
-                                continue;
-                            }
-                        }
-                        m = pLi.matcher(post.getAddrinfo());
-                        if (m.find()) {
-                            post.setAddrinfo(post.getAddrinfo().substring(0, m.end(1)) + " " + post.getAddrinfo().substring(m.end(1)));
-                        }
-                        post.setOriInfo(oriInfo);
-                        m = pSection.matcher(post.getAddrinfo());
-                        post.setSec(m.find() ? Integer.parseInt(m.group(1), 10) : 0);
-                        String tail = pDecimal.matcher(post.getTailInfo()).replaceAll("0");
-                        Map<String, String> tailPatternMap = tailPatternMap();
-                        String ptn = tailPatternMap.get(tail);
-                        if (ptn == null) {
-                            logger.error("無法解析帶有 \"{}\" 的[{}]", post.getTailInfo(), strLine);
-                        } else {
-                            Object[] values = pArgue.matcher(ptn).find()
-                                    ? findNumbers(post.getTailInfo()) : null;
-                            if (values != null && values.length > 2) {
-                                ptn = modify2NeighborPattern(tail, ptn, values);
-                            }
-                            String[] ptns = values == null ? ptn.split(";") : String.format(ptn, values).split(";");
-                            if (build != null && !build.isEmpty()) {
-                                ptns[0] = ptns[0] + " and build == '" + build + "'";
-                            }
-                            post.setExpress(ptns[0]);
-                            post.setLane("null".equals(ptns[1]) ? null : ptns[1]);
-                            post.setAlley("null".equals(ptns[2]) ? null : ptns[2]);
-                            post.setParnums("null".equals(ptns[3]) ? null : new BigDecimal(ptns[3]).setScale(3).floatValue());
-                            post.setParnume("null".equals(ptns[4]) ? null : new BigDecimal(ptns[4]).setScale(3).floatValue());
-                            post.setFloors("null".equals(ptns[5]) ? null : Integer.parseInt(ptns[5], 10));
-                            post.setFloore("null".equals(ptns[6]) ? null : Integer.parseInt(ptns[6], 10));
-                            post.setBoundary(ptns[7]);
-                            dao.insertPost5(post);
-                            if (++ra % 1000 == 0) {
-                                dao.commit();
-                                dao.begin();
-                                logger.debug("已新增3+2碼郵遞區號{}筆", ra);
-                            }
-                        }
-                        tailPatternMap.clear();
-                    } else {
-                        logger.error("無法處理:{}{}", post.getCity(), strLine);
+                    post.setArea(Address.normailize(strLine.substring(8, 12)));
+                    post.setTailInfo(pSpacies.matcher(strLine.substring(25)).replaceAll(""));
+                    post.setAddrinfo(Address.normailize(strLine.substring(12, 25)));
+                    //修正設定檔錯誤
+                    if ("鎮東2巷".equals(post.getAddrinfo())) {
+                        post.setAddrinfo("鎮東路2巷");
                     }
+                    String build = "";
+                    Matcher m = pSection.matcher(post.getAddrinfo());
+                    post.setSec(m.find() ? Integer.parseInt(m.group(1), 10) : 0);
+                    m = pLbrackets.matcher(post.getTailInfo());
+                    if (m.find()) {
+                        build = pRbrackets.matcher(post.getTailInfo().substring(m.start() + 1)).replaceAll("");
+                        post.setTailInfo(post.getTailInfo().substring(0, m.start()));
+                    }
+                    if (pDecimalHead.matcher(post.getTailInfo()).matches()) {
+                        post.setTailInfo("　" + post.getTailInfo());
+                    }
+                    Map<String, String> tailPatternMap = tailPatternMap();
+                    String ptn = tailPatternMap.get(pDecimal.matcher(post.getTailInfo()).replaceAll("0"));
+                    if (ptn == null) {
+                        logger.error("無法解析帶有 \"{}\" 的[{}]", post.getTailInfo(), strLine);
+                    } else {
+                        Object[] values = pArgue.matcher(ptn).find()
+                                ? findNumbers(post.getTailInfo()) : null;
+                        if (values != null && values.length > 2) {
+                            ptn = modify2NeighborPattern(post.getTailInfo(), ptn, values);
+                        }
+                        String[] ptns = values == null ? ptn.split(";") : String.format(ptn, values).split(";");
+                        if (build != null && !build.isEmpty()) {
+                            ptns[0] = ptns[0] + " and build == '" + build + "'";
+                        }
+                        post.setExpress(ptns[0]);
+                        post.setLane("null".equals(ptns[1]) ? null : ptns[1]);
+                        post.setAlley("null".equals(ptns[2]) ? null : ptns[2]);
+                        post.setParnums("null".equals(ptns[3]) ? null : new BigDecimal(ptns[3]).setScale(3).floatValue());
+                        post.setParnume("null".equals(ptns[4]) ? null : new BigDecimal(ptns[4]).setScale(3).floatValue());
+                        post.setFloors("null".equals(ptns[5]) ? null : Integer.parseInt(ptns[5], 10));
+                        post.setFloore("null".equals(ptns[6]) ? null : Integer.parseInt(ptns[6], 10));
+                        post.setBoundary(ptns[7]);
+                        dao.insertPost5(post);
+                        if (++ra % 1000 == 0) {
+                            dao.commit();
+                            dao.begin();
+                            logger.debug("已新增3+2碼郵遞區號{}筆", ra);
+                        }
+                    }
+                    tailPatternMap.clear();
                 }
                 dao.commit();
                 if (ra % 1000 > 0) {
