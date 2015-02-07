@@ -7,6 +7,6 @@
 
 ## 其它文件參考
 
-[設計說明](https://github.com/kentyeh/twpost32/wiki/%E8%A8%AD%E8%A8%88%E6%AD%B7%E7%A8%8B)
+[設計說明](https://github.com/kentyeh/twpost32/wiki/%E8%A8%AD%E8%A8%88%E8%AA%AA%E6%98%8E)
 
-[設計歷程](https://github.com/kentyeh/twpost32/wiki/%E8%A8%AD%E8%A8%88%E8%AA%AA%E6%98%8E)
+[設計歷程](https://github.com/kentyeh/twpost32/wiki/%E8%A8%AD%E8%A8%88%E6%AD%B7%E7%A8%8B)
