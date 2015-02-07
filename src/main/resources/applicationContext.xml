@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:c="http://www.springframework.org/schema/c"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xmlns:jee="http://www.springframework.org/schema/jee"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
+       http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee.xsd">
+    <!--support JSR-250-->
+    <bean class="org.springframework.context.annotation.CommonAnnotationBeanPostProcessor"/>
+    
+    <!-- defind application variables-->
+    <util:map id="appProperies" map-class="java.util.HashMap" key-type="java.lang.String" value-type="java.lang.String">
+        <entry key="jndi.dataSource.name" value="${jndi.dsname}" />
+        <entry key="i18n.localeParam" value="locale" />
+        <entry key="resfolder" value="${project.build.testOutputDirectory}" />
+        <entry key="i18n.defaultLocale" value="zh_TW" />
+        <entry key="post5url" value="http://download.post.gov.tw/post/download/Zip32_UTF8_10312.txt" />
+    </util:map>
+    
+    <jee:jndi-lookup id="dataSource" jndi-name="#{appProperies['jndi.dataSource.name']}" 
+                     resource-ref="true" cache="false" lookup-on-startup="false" expected-type="javax.sql.DataSource"/>
+    
+    <bean id="zip" class="twzip.context.Zip"/>   
+    <!--Import relative configuration-->
+    <import resource="applicationContext-mvc.xml"/>
+</beans>

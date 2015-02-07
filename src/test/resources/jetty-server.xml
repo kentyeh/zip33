@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE Configure PUBLIC "-//Jetty//Configure//EN" "http://www.eclipse.org/jetty/configure_9_0.dtd">
+<Configure id="Server" class="org.eclipse.jetty.server.Server">
+    <New id="httpConfig" class="org.eclipse.jetty.server.HttpConfiguration">
+        <Set name="secureScheme">https</Set>
+        <Set name="securePort">
+            <Property name="jetty.secure.port" default="${test.ssl.port}" />
+        </Set>
+        <Set name="outputBufferSize">32768</Set>
+        <Set name="requestHeaderSize">8192</Set>
+        <Set name="responseHeaderSize">8192</Set>
+        <Set name="sendServerVersion">true</Set>
+        <Set name="sendDateHeader">false</Set>
+        <Set name="headerCacheSize">512</Set>
+        <!-- Uncomment to enable handling of X-Forwarded- style headers
+        <Call name="addCustomizer">
+            <Arg>
+                <New class="org.eclipse.jetty.server.ForwardedRequestCustomizer"/>
+            </Arg>
+        </Call>
+        -->
+    </New>
+    <New id="sslContextFactory" class="org.eclipse.jetty.util.ssl.SslContextFactory">
+        <Set name="KeyStorePath">
+            <Property name="jetty.base" default="." />/<Property name="jetty.keystore" default="${project.build.directory}/ssl.keystore"/>
+        </Set>
+        <Set name="KeyStorePassword">
+            <Property name="jetty.keystore.password" default="${key.pass}"/>
+        </Set>
+        <Set name="KeyManagerPassword">
+            <Property name="jetty.keymanager.password" default="${key.pass}"/>
+        </Set>
+        <Set name="TrustStorePath">
+            <Property name="jetty.base" default="." />/<Property name="jetty.truststore" default="${project.build.directory}/ssl.keystore"/>
+        </Set>
+        <Set name="TrustStorePassword">
+            <Property name="jetty.truststore.password" default="${key.pass}"/>
+        </Set>
+        <Set name="EndpointIdentificationAlgorithm"></Set>
+        <Set name="ExcludeCipherSuites">
+            <Array type="String">
+                <Item>SSL_RSA_WITH_DES_CBC_SHA</Item>
+                <Item>SSL_DHE_RSA_WITH_DES_CBC_SHA</Item>
+                <Item>SSL_DHE_DSS_WITH_DES_CBC_SHA</Item>
+                <Item>SSL_RSA_EXPORT_WITH_RC4_40_MD5</Item>
+                <Item>SSL_RSA_EXPORT_WITH_DES40_CBC_SHA</Item>
+                <Item>SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA</Item>
+                <Item>SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA</Item>
+            </Array>
+        </Set>
+    </New>
+    
+    <New id="sslHttpConfig" class="org.eclipse.jetty.server.HttpConfiguration">
+        <Arg>
+            <Ref refid="httpConfig"/>
+        </Arg>
+        <Call name="addCustomizer">
+            <Arg>
+                <New class="org.eclipse.jetty.server.SecureRequestCustomizer"/>
+            </Arg>
+        </Call>
+    </New>
+    
+    <Call id="httpsConnector" name="addConnector">
+        <Arg>
+            <New class="org.eclipse.jetty.server.ServerConnector">
+                <Arg name="server">
+                    <Ref refid="Server" />
+                </Arg>
+                <Arg name="factories">
+                    <Array type="org.eclipse.jetty.server.ConnectionFactory">
+                        <Item>
+                            <New class="org.eclipse.jetty.server.SslConnectionFactory">
+                                <Arg name="next">http/1.1</Arg>
+                                <Arg name="sslContextFactory">
+                                    <Ref refid="sslContextFactory"/>
+                                </Arg>
+                            </New>
+                        </Item>
+                        <Item>
+                            <New class="org.eclipse.jetty.server.HttpConnectionFactory">
+                                <Arg name="config">
+                                    <Ref refid="sslHttpConfig"/>
+                                </Arg>
+                            </New>
+                        </Item>
+                    </Array>
+                </Arg>
+                <Set name="host">
+                    <Property name="jetty.host" />
+                </Set>
+                <Set name="port">
+                    <Property name="https.port" default="${test.ssl.port}" />
+                </Set>
+                <Set name="idleTimeout">
+                    <Property name="https.timeout" default="30000"/>
+                </Set>
+            </New>
+        </Arg>
+    </Call>
+</Configure>
