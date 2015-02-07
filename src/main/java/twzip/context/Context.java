@@ -272,6 +272,9 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
                     if ("鎮東2巷".equals(post.getAddrinfo())) {
                         post.setAddrinfo("鎮東路2巷");
                     }
+                    if ("同平2弄".equals(post.getAddrinfo())) {
+                        post.setAddrinfo("同平巷二弄");
+                    }
                     String build = "";
                     Matcher m = pSection.matcher(post.getAddrinfo());
                     post.setSec(m.find() ? Integer.parseInt(m.group(1), 10) : 0);
