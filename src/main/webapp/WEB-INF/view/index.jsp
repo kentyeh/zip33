@@ -10,7 +10,7 @@
         <link rel="stylesheet" href="${pageContext.request.contextPath}/wro/all.css"/>
         <script src="${pageContext.request.contextPath}/wro/all.js"></script>
     </head>
-    <body>
+    <body onload="doOnload()">
         <div style="margin:0 0 10px 10px; width:300px;">3+2碼郵遞區號速查 請輸入地址</div>
         <form action="${pageContext.request.contextPath}/" method="post" onsubmit="return doSubmit(this)">
             <input type="text" name="addr" size="100" placeholder="輸入地址，如'台北市萬華區大理街132之10號','花蓮縣鳳林鎮信義路249號'等" 
