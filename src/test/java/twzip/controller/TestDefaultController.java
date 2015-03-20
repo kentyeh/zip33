@@ -77,6 +77,8 @@ public class TestDefaultController extends AbstractTestNGSpringContextTests {
         res[4][1] = "臺中市北屯區松強里001鄰昌平路二段１２之１５巷１６號";
         res[5][0] = "54246";
         res[5][1] = "南投縣草屯鎮土城里003鄰中正路２１７之１２之１巷３８號";
+        res[0][0] = "35651";
+        res[0][1] = "苗栗縣後龍鎮中心路98號";
         return res;
     }
 

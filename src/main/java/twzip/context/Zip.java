@@ -24,6 +24,7 @@ import twzip.model.Village;
 
 /**
  * 取得地址之郵遞區號
+ *
  * @author Kent Yeh
  */
 public class Zip implements InitializingBean {
@@ -37,6 +38,7 @@ public class Zip implements InitializingBean {
     EvaluationContext spelCtx;
 
     private static final Logger logger = LogManager.getLogger(Zip.class);
+    Pattern pVillageEnd = Pattern.compile("[\\x{9109}\\x{93AE}\\x{6751}\\x{91CC}]$");
     Pattern pSpacies = Pattern.compile("\\s+");
     Pattern pSection = Pattern.compile("(\\d+)\\x{6BB5}");//xx段
     Pattern pLn = Pattern.compile("(\\d+)\\x{9130}");//xx鄰
@@ -128,7 +130,11 @@ public class Zip implements InitializingBean {
                     post.setFirstMatchesPos(idx);
                 }
                 if (idx == -1) {
-                    break;
+                    if (pVillageEnd.matcher(infos[i]).find()) {
+                        idx = infos[i].length();
+                    } else {
+                        break;
+                    }
                 } else {
                     src = src.substring(idx + infos[i].length());
                     if (i == infos.length - 1) {

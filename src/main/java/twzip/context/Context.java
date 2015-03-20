@@ -69,6 +69,7 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 import twzip.model.Address;
 import twzip.model.Dao;
 import twzip.model.Post5;
+import twzip.model.Village;
 
 /**
  *
@@ -113,6 +114,11 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
                     throw new RuntimeException("設定檔post5.sql表達式有誤，請修改後再重新執行");
                 }
             } else if (dao.tableExists("post5") == null || dao.post5Count() == 0) {
+                //整理郵局檔案時，必須配合村里資料
+                if (countDownLatch != null) {
+                    countDownLatch.await();
+                    resetVIlage(vilsql);
+                }
                 initPost5(Paths.get(respath, "twpostcode.txt"));
             }
             if (countDownLatch != null) {
@@ -274,6 +280,12 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
                     }
                     if ("同平2弄".equals(post.getAddrinfo())) {
                         post.setAddrinfo("同平巷二弄");
+                    }
+                    String ai = post.getAddrinfo();
+                    for (Village v : dao.findVillages(post.getCity(), post.getArea())) {
+                        if (ai.startsWith(v.getVil())) {
+                            post.setAddrinfo(ai.substring(0, v.getVil().length()) + ' ' + ai.substring(v.getVil().length()));
+                        }
                     }
                     String build = "";
                     Matcher m = pSection.matcher(post.getAddrinfo());

@@ -109,12 +109,23 @@ public interface Dao extends Transactional<Dao>, AutoCloseable {
     /**
      * 以縣市取得村里資料
      *
-     * @param city
+     * @param city 縣市
      * @return
      */
     @SqlQuery("SELECT * FROM village WHERE city like :city || '%'")
     @RegisterMapper(Village.DistrictMapper.class)
     List<Village> findVillages(@Bind("city") String city);
+
+    /**
+     * 取縣市鄉鎮區之村里
+     *
+     * @param city 縣市
+     * @param dist 鄉鎮區
+     * @return
+     */
+    @SqlQuery("SELECT * FROM village WHERE city = :city AND dist = :dist")
+    @RegisterMapper(Village.DistrictMapper.class)
+    List<Village> findVillages(@Bind("city") String city, @Bind("dist") String dist);
 
     /**
      * 取得所有郵遞區號設定
