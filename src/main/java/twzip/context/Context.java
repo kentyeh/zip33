@@ -607,6 +607,8 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
         em.put("　0巷0弄全", "lane == %1$d and alleyNum == %2$d;^%1$d^;^%2$d^;null;null;null;null;laneAlley == 0 and number == %1$d");
         em.put("　0巷0弄單0號以上", "number %% 2 == 1 and lane == %1$d and alley == %2$d and number %% 2 == 1 and number >= %3$d"
                 + ";^%1$d^;^%2$d^;null;null;null;null;false;((laneAlley == 0 and number == %1$d) or (lane == %1$d and alley == 0 and number == %2$d))");
+        em.put("　0巷0弄單0號至0號", "number %% 2 == 1 and lane == %1$d and alley == %2$d and number %% 2 == 1 and (number >= %3$d or number <= %4$d)"
+                + ";^%1$d^;^%2$d^;null;null;null;null;false;((laneAlley == 0 and number == %1$d) or (lane == %1$d and alley == 0 and number == %2$d))");
         em.put("　0巷0弄單0號以下", "number %% 2 == 1 and lane == %1$d and alley == %2$d and number %% 2 == 1 and number <= %3$d"
                 + ";^%1$d^;^%2$d^;null;null;null;null;((laneAlley == 0 and number == %1$d) or (lane == %1$d and alley == 0 and number == %2$d))");
         em.put("　0巷0弄單全", "lane == %1$d and alley == %2$d and number %%2 == 1;^%1$d^;^%2$d^;null;null;null;null"
@@ -616,6 +618,8 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
         em.put("　0巷0弄連0號以下", "lane == %1$d and alley == %2$d and number <= %3$d;^%1$d^;^%2$d^;null;null;null;null"
                 + ";((laneAlley == 0 and number == %1$d) or (lane == %1$d and alley == 0 and number == %2$d))");
         em.put("　0巷0弄雙0號以上", "lane == %1$d and alley == %2$d and number %% 2 == 0 and number >= %3$d;^%1$d^;^%2$d^;null;null;null;null"
+                + ";((laneAlley == 0 and number == %1$d) or (lane == %1$d and alley == 0 and number == %2$d))");
+        em.put("　0巷0弄雙0號至0號", "lane == %1$d and alley == %2$d and number %% 2 == 0 and (number >= %3$d or number <= %4$d);^%1$d^;^%2$d^;null;null;null;null"
                 + ";((laneAlley == 0 and number == %1$d) or (lane == %1$d and alley == 0 and number == %2$d))");
         em.put("　0巷0弄雙0號以下", "lane == %1$d and alley == %2$d and number %% 2 == 0 and number <= %3$d;^%1$d^;^%2$d^;null;null;null;null"
                 + ";((laneAlley == 0 and number == %1$d) or (lane == %1$d and alley == 0 and number == %2$d))");
