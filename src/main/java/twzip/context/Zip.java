@@ -119,7 +119,9 @@ public class Zip implements InitializingBean {
         for (Post5 post : posts) {
             int idx = address.indexOf(post.getArea());
             String src = dist.isEmpty() ? address : idx == -1 ? address : address.substring(idx + post.getArea().length());
-            if (!vil.isEmpty() && !post.getAddrinfo().contains(vil) && pos > -1) {
+            //因為郵局的設定檔把有的"村"移除了
+            String vil2 = vil.length()>2 && vil.charAt(vil.length() - 1) == '村' ? vil.substring(0, vil.length() - 1) : vil;
+            if (!vil.isEmpty() && !post.getAddrinfo().contains(vil2) && pos > -1) {
                 //移除村里干擾
                 src = src.replaceFirst(vil, "");
             }

@@ -64,7 +64,7 @@ public class TestDefaultController extends AbstractTestNGSpringContextTests {
 
     @DataProvider(name = "addrs", parallel = false)
     public String[][] addrs() {
-        String[][] res = new String[6][2];
+        String[][] res = new String[8][2];
         res[0][0] = "10801";
         res[0][1] = "台北市萬華區大理街132之10號";
         res[1][0] = "40763";
@@ -77,8 +77,10 @@ public class TestDefaultController extends AbstractTestNGSpringContextTests {
         res[4][1] = "臺中市北屯區松強里001鄰昌平路二段１２之１５巷１６號";
         res[5][0] = "54246";
         res[5][1] = "南投縣草屯鎮土城里003鄰中正路２１７之１２之１巷３８號";
-        res[0][0] = "35651";
-        res[0][1] = "苗栗縣後龍鎮中心路98號";
+        res[6][0] = "35651";
+        res[6][1] = "苗栗縣後龍鎮埔頂里中心路98號";
+        res[7][0] = "97253";
+        res[7][1] = "花蓮縣秀林鄉崇德村3鄰210號";
         return res;
     }
 
