@@ -23,7 +23,7 @@
         <entry key="i18n.localeParam" value="locale" />
         <entry key="i18n.defaultLocale" value="zh_TW" />
         <entry key="resfolder" value="${project.build.testOutputDirectory}" />
-        <entry key="post5url" value="http://download.post.gov.tw/post/download/Zip32_UTF8_10312.txt" />
+        <entry key="post5url" value="http://download.post.gov.tw/post/download/Xml_10510.xml" />
     </util:map>
     
     <!--DataSource setting -->

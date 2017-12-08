@@ -53,7 +53,7 @@ public class WebDriverFactory {
                 ci.setCapability(CapabilityType.ACCEPT_SSL_CERTS, true);
                 return new SafariDriver(ci);
             default:
-                DesiredCapabilities ch = DesiredCapabilities.htmlUnitWithJs();
+                DesiredCapabilities ch = DesiredCapabilities.htmlUnit();
                 ch.setCapability(CapabilityType.ACCEPT_SSL_CERTS, true);
                 return new HtmlUnitDriver(ch);
         }

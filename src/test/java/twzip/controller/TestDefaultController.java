@@ -39,7 +39,7 @@ import twzip.model.Post5;
 @ContextConfiguration(classes = twzip.context.TestContext.class)
 public class TestDefaultController extends AbstractTestNGSpringContextTests {
 
-    private static Logger logger = LogManager.getLogger(TestDefaultController.class);
+    private static final Logger logger = LogManager.getLogger(TestDefaultController.class);
     @Autowired
     WebApplicationContext wac;
     private MockMvc mockMvc;

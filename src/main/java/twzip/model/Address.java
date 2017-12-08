@@ -62,6 +62,7 @@ public class Address {
         replaces.put(Pattern.compile("\\x{FF08}"), "(");
         replaces.put(Pattern.compile("\\x{FF09}"), ")");
         replaces.put(Pattern.compile("\\x{81FA}"), "台");
+        replaces.put(Pattern.compile("\\x{5553}"), "啟");
         replaces.put(Pattern.compile("\\x{5869}"), "鹽");
         replaces.put(Pattern.compile("\\x{62D5}"), "托");
         replaces.put(Pattern.compile("\\x{5ECD}"), "廓");

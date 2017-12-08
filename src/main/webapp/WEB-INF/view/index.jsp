@@ -28,7 +28,7 @@
                 <table>
                     <tbody>
                         <tr><td>郵遞區號：</td><td colspan="2" class="msg" id="zipcode">${zips[0].zipcode}</td></tr>
-                        <tr><td>地　　區：</td><td>${zips[0].oriInfo}</td><td>${zips[0].tailInfo}</td></tr>
+                        <tr><td>地&emsp;&emsp;區：</td><td>${zips[0].oriInfo}</td><td>${zips[0].tailInfo}</td></tr>
                     </tbody>
                 </table>
             </c:if>

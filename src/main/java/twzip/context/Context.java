@@ -24,6 +24,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.sql.DataSource;
+import javax.xml.parsers.SAXParserFactory;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathFactory;
 import org.apache.http.Consts;
@@ -66,10 +67,16 @@ import org.springframework.expression.spel.SpelParseException;
 import org.springframework.expression.spel.SpelParserConfiguration;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
+import org.xml.sax.Attributes;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
 import twzip.model.Address;
 import twzip.model.Dao;
+import twzip.model.IntSecquencer;
 import twzip.model.Post5;
 import twzip.model.Village;
+import zip4pos.util.function.Consumer;
+import zip4pos.util.function.IntSupplier;
 
 /**
  *
@@ -119,7 +126,7 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
                     countDownLatch.await();
                     resetVIlage(vilsql);
                 }
-                initPost5(Paths.get(respath, "twpostcode.txt"));
+                initPost5(Paths.get(respath, "twpostcode.xml"));
             }
             if (countDownLatch != null) {
                 countDownLatch.await();
@@ -236,6 +243,75 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
         return ints.toArray(res);
     }
 
+    private class Post5Handler extends DefaultHandler {
+
+        Post5 post5 = null;
+        Pattern pTai = Pattern.compile("\\x{81FA}");//臺
+        Pattern pSpacies = Pattern.compile("\\s+");
+        int step = 0, prestep = 0;
+        boolean isInXle = false;
+        String oriInfo = "";
+        String content = "";
+        Consumer<Post5> consumer;
+
+        public Post5Handler(Consumer<Post5> consumer) {
+            this.consumer = consumer;
+        }
+
+        @Override
+        public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
+            if (qName.startsWith("Xml")) {
+                post5 = new Post5();
+                step = 0;
+                oriInfo = "";
+            } else if (qName.startsWith("欄位")) {
+                step++;
+                isInXle = true;
+            }
+        }
+
+        @Override
+        public void endElement(String uri, String localName, String qName) throws SAXException {
+            isInXle = false;
+            content = "";
+            if (qName.startsWith("欄位") && consumer != null && post5 != null && step == 4) {
+                consumer.accept(post5);
+            }
+        }
+
+        @Override
+        public void characters(char[] ch, int start, int length) throws SAXException {
+            if (isInXle) {
+                String str = new String(ch, start, length);
+                if (prestep == step) {
+                    str = content + str;
+                }
+                switch (step) {
+                    case 1:
+                        post5.setZipcode(str);
+                        break;
+                    case 2:
+                        if (str.length() > 3) {
+                            post5.setCity(pTai.matcher(str.substring(0, 3)).replaceAll("台"));
+                            post5.setArea(Address.normailize(str.substring(3)));
+                            oriInfo = pSpacies.matcher(str).replaceAll("");
+                        }
+                        break;
+                    case 3:
+                        post5.setAddrinfo(Address.normailize(str));
+                        post5.setOriInfo(oriInfo + pSpacies.matcher(str).replaceAll(""));
+                        break;
+                    case 4:
+                        post5.setTailInfo(pSpacies.matcher(str).replaceAll(""));
+                        break;
+                    default:
+                }
+                content = str;
+                prestep = step;
+            }
+        }
+    }
+
     private void initPost5(Path post5sql) throws Exception {
         logger.info("初始化郵遞區號資料庫");
         if (!Files.exists(post5sql)) {
@@ -247,88 +323,83 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
             }
         }
         if (Files.exists(post5sql)) {
-            try (BufferedReader br = Files.newBufferedReader(post5sql, StandardCharsets.UTF_8);
-                    Dao dao = context.getBean("dao", Dao.class)) {
+            try (Dao dao = context.getBean("dao", Dao.class)) {
+                final IntSupplier rowAffected = new IntSecquencer(0);
                 dao.dropPost5();
                 dao.createPost5();
                 //<editor-fold defaultstate="collapsed" desc="Patterns">
-                Pattern pa = Pattern.compile("(\\P{M}[\\x{5340}\\x{9109}\\x{53F0}\\x{5E02}\\x{93AE}\\x{5CF6}])"
+                final Pattern pa = Pattern.compile("(\\P{M}[\\x{5340}\\x{9109}\\x{53F0}\\x{5E02}\\x{93AE}\\x{5CF6}])"
                         + "[^\\x{5340}\\x{9109}\\x{53F0}\\x{5E02}\\x{93AE}\\x{5CF6}]");//區鄉台市鎮島
-                Pattern pSpacies = Pattern.compile("\\s+");
-                Pattern pTai = Pattern.compile("\\x{81FA}");//臺
-                Pattern pSection = Pattern.compile("(\\d+)\\x{6BB5}");//xx段
-                Pattern pDecimal = Pattern.compile("\\d+");
-                Pattern pArgue = Pattern.compile("%\\d\\$d");
-                Pattern pLbrackets = Pattern.compile("[(\\x{FF08}]");
-                Pattern pRbrackets = Pattern.compile("[)\\x{FF09}]");
-                Pattern pDecimalHead = Pattern.compile("^\\d.*");
+                final Pattern pSection = Pattern.compile("(\\d+)\\x{6BB5}");//xx段
+                final Pattern pDecimal = Pattern.compile("\\d+");
+                final Pattern pArgue = Pattern.compile("%\\d\\$d");
+                final Pattern pLbrackets = Pattern.compile("[(\\x{FF08}]");
+                final Pattern pRbrackets = Pattern.compile("[)\\x{FF09}]");
+                final Pattern pDecimalHead = Pattern.compile("^\\d.*");
+                final Pattern pLi = Pattern.compile("(\\P{M}{2,}[\\x{91CC}\\x{6751}])[^\\x{8857}]\\p{InCJKUnifiedIdeographs}{2,}");//[里村][^街]
                 //</editor-fold>
                 String strLine;
                 int ra = 0;
                 dao.begin();
-                while ((strLine = br.readLine()) != null) {
-                    Post5 post = new Post5();
-                    post.setZipcode(strLine.substring(0, 5));
-                    post.setOriInfo(pSpacies.matcher(strLine.substring(5, 24)).replaceAll(""));
-                    post.setCity(pTai.matcher(strLine.substring(5, 8)).replaceAll("台"));
-                    post.setArea(Address.normailize(strLine.substring(8, 12)));
-                    post.setTailInfo(pSpacies.matcher(strLine.substring(25)).replaceAll(""));
-                    post.setAddrinfo(Address.normailize(strLine.substring(12, 25)));
-                    //修正設定檔錯誤
-                    if ("鎮東2巷".equals(post.getAddrinfo())) {
-                        post.setAddrinfo("鎮東路2巷");
-                    }
-                    if ("同平2弄".equals(post.getAddrinfo())) {
-                        post.setAddrinfo("同平巷二弄");
-                    }
-                    String ai = post.getAddrinfo();
-                    for (Village v : dao.findVillages(post.getCity(), post.getArea())) {
-                        if (ai.startsWith(v.getVil())) {
-                            post.setAddrinfo(ai.substring(0, v.getVil().length()) + ' ' + ai.substring(v.getVil().length()));
+                SAXParserFactory.newInstance().newSAXParser().parse(Files.newInputStream(post5sql, StandardOpenOption.READ), new Post5Handler(new Consumer<Post5>() {
+
+                    @Override
+                    public void accept(Post5 post) {
+                        //修正設定檔錯誤
+                        if ("同平2弄".equals(post.getAddrinfo())) {
+                            post.setAddrinfo("同平巷二弄");
                         }
-                    }
-                    String build = "";
-                    Matcher m = pSection.matcher(post.getAddrinfo());
-                    post.setSec(m.find() ? Integer.parseInt(m.group(1), 10) : 0);
-                    m = pLbrackets.matcher(post.getTailInfo());
-                    if (m.find()) {
-                        build = pRbrackets.matcher(post.getTailInfo().substring(m.start() + 1)).replaceAll("");
-                        post.setTailInfo(post.getTailInfo().substring(0, m.start()));
-                    }
-                    if (pDecimalHead.matcher(post.getTailInfo()).matches()) {
-                        post.setTailInfo("　" + post.getTailInfo());
-                    }
-                    Map<String, String> tailPatternMap = tailPatternMap();
-                    String ptn = tailPatternMap.get(pDecimal.matcher(post.getTailInfo()).replaceAll("0"));
-                    if (ptn == null) {
-                        logger.error("無法解析帶有 \"{}\" 的[{}]", post.getTailInfo(), strLine);
-                    } else {
-                        Object[] values = pArgue.matcher(ptn).find()
-                                ? findNumbers(post.getTailInfo()) : null;
-                        if (values != null && values.length > 2) {
-                            ptn = modify2NeighborPattern(post.getTailInfo(), ptn, values);
+                        String ai = post.getAddrinfo();
+                        for (Village v : dao.findVillages(post.getCity(), post.getArea())) {
+                            if (ai.startsWith(v.getVil())) {
+                                post.setAddrinfo(ai.substring(0, v.getVil().length()) + ' ' + ai.substring(v.getVil().length()));
+                            }
                         }
-                        String[] ptns = values == null ? ptn.split(";") : String.format(ptn, values).split(";");
-                        if (build != null && !build.isEmpty()) {
-                            ptns[0] = ptns[0] + " and build == '" + build + "'";
+                        String build = "";
+                        Matcher m = pSection.matcher(post.getAddrinfo());
+                        post.setSec(m.find() ? Integer.parseInt(m.group(1), 10) : 0);
+                        m = pLbrackets.matcher(post.getTailInfo());
+                        if (m.find()) {
+                            build = pRbrackets.matcher(post.getTailInfo().substring(m.start() + 1)).replaceAll("");
+                            post.setTailInfo(post.getTailInfo().substring(0, m.start()));
                         }
-                        post.setExpress(ptns[0]);
-                        post.setLane("null".equals(ptns[1]) ? null : ptns[1]);
-                        post.setAlley("null".equals(ptns[2]) ? null : ptns[2]);
-                        post.setParnums("null".equals(ptns[3]) ? null : new BigDecimal(ptns[3]).setScale(3).floatValue());
-                        post.setParnume("null".equals(ptns[4]) ? null : new BigDecimal(ptns[4]).setScale(3).floatValue());
-                        post.setFloors("null".equals(ptns[5]) ? null : Integer.parseInt(ptns[5], 10));
-                        post.setFloore("null".equals(ptns[6]) ? null : Integer.parseInt(ptns[6], 10));
-                        post.setBoundary(ptns[7]);
-                        dao.insertPost5(post);
-                        if (++ra % 1000 == 0) {
-                            dao.commit();
-                            dao.begin();
-                            logger.debug("已新增3+2碼郵遞區號{}筆", ra);
+                        if (pDecimalHead.matcher(post.getTailInfo()).matches()) {
+                            post.setTailInfo("　" + post.getTailInfo());
                         }
+                        Map<String, String> tailPatternMap = tailPatternMap();
+                        String ptn = tailPatternMap.get(pDecimal.matcher(post.getTailInfo()).replaceAll("0"));
+                        if (ptn == null) {
+                            logger.fatal("無法解析帶有 \"{}\" 的[{}]\n樣式[{}]", post.getTailInfo(), post.toString(),
+                                    pDecimal.matcher(post.getTailInfo()).replaceAll("0"));
+                        } else {
+                            Object[] values = pArgue.matcher(ptn).find()
+                                    ? findNumbers(post.getTailInfo()) : null;
+                            if (values != null && values.length > 2) {
+                                ptn = modify2NeighborPattern(post.getTailInfo(), ptn, values);
+                            }
+                            String[] ptns = values == null ? ptn.split(";") : String.format(ptn, values).split(";");
+                            if (build != null && !build.isEmpty()) {
+                                ptns[0] = ptns[0] + " and build == '" + build + "'";
+                            }
+                            post.setExpress(ptns[0]);
+                            post.setLane("null".equals(ptns[1]) ? null : ptns[1]);
+                            post.setAlley("null".equals(ptns[2]) ? null : ptns[2]);
+                            post.setParnums("null".equals(ptns[3]) ? null : new BigDecimal(ptns[3]).setScale(3).floatValue());
+                            post.setParnume("null".equals(ptns[4]) ? null : new BigDecimal(ptns[4]).setScale(3).floatValue());
+                            post.setFloors("null".equals(ptns[5]) ? null : Integer.parseInt(ptns[5], 10));
+                            post.setFloore("null".equals(ptns[6]) ? null : Integer.parseInt(ptns[6], 10));
+                            post.setBoundary(ptns[7]);
+                            dao.insertPost5(post);
+                            int ra = rowAffected.getAsInt() + 1;
+                            if (ra % 1000 == 0) {
+                                dao.commit();
+                                dao.begin();
+                                logger.debug("已新增3+2碼郵遞區號{}筆", ra);
+                            }
+                        }
+                        tailPatternMap.clear();
                     }
-                    tailPatternMap.clear();
-                }
+                }));
                 dao.commit();
                 if (ra % 1000 > 0) {
                     logger.debug("共新增3+2碼郵遞區號{}筆", ra);
@@ -497,6 +568,7 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
 
     public Map<String, String> tailPatternMap() {
         Map<String, String> em = new HashMap<>();
+        //<editor-fold defaultstate="collapsed" desc="填寫資料">
         em.put("全", "true;null;null;null;null;null;null;false");
         em.put("單0之0號以上", "laneNum %% 2 == 1 and (laneNum > %1$d or (laneAlley == 0 and number == %1$d and addnum >= %2$d))"
                 + ";null;null;%1$d.%2$03d;%1$d.999;null;null;laneAlley == %1$d");
@@ -708,6 +780,7 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
         em.put("　0鄰", "ln == %1$d;null;null;null;null;null;null;false");
         em.put("　0附號全", "laneAlley == 0 and number == %1$d and addnum > 0;null;null;%1$d.001;%1$d.999;null;null;false");
         em.put("　0樓全", "floor == %1$d ;null;null;null;null;%1$d;%1$d;false");
+        //</editor-fold>
         return em;
     }
 }

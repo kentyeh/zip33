@@ -36,14 +36,14 @@ public class TestIntegratedWithHunitUnitOnly {
         this.httpPort = httpPort;
         logger.debug("http port is {}", httpPort);
         this.contextPath = contextPath;
-        webClient = new WebClient(BrowserVersion.FIREFOX_38);
+        webClient = new WebClient(BrowserVersion.FIREFOX_52);
         webClient.getOptions().setUseInsecureSSL(true);
     }
 
     @AfterClass
     public void tearDown() {
         if (this.webClient != null) {
-            this.webClient.closeAllWindows();
+            this.webClient.close();
         }
         logger.info("Finished !");
     }
