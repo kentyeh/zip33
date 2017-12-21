@@ -39,6 +39,7 @@ public class Address {
     private static final Pattern pF1 = Pattern.compile("(\\p{InCJKUnifiedIdeographs}+)?\\x{5730}\\x{4E0B}(-?\\d+)\\x{6A13}");//樓
     private static final Pattern pF2 = Pattern.compile("(\\p{InCJKUnifiedIdeographs}+[^\\x{6A13}])?[bB](-?\\d+)[fF]?");
     private static final Pattern pF3 = Pattern.compile("(\\p{InCJKUnifiedIdeographs}+)?(-?\\d+)[\\x{6A13}fF]");
+    private static final Pattern pNoNum = Pattern.compile("[^\\x{865F}].*\\d+$");//缺少號又以數字結尾
 
     static {
         replaces = new LinkedHashMap<>();
@@ -50,7 +51,7 @@ public class Address {
         replaces.put(Pattern.compile("\\x{5341}(?=" + one2nine + ")"), "1");
         replaces.put(Pattern.compile("\\x{5341}"), "10");
         replaces.put(Pattern.compile("\\x{FF10}"), "0");
-        replaces.put(Pattern.compile("[\\x{4E00}\\x{FF11}]"), "1");
+	replaces.put(Pattern.compile("[\\x{3127}\\x{4E00}\\x{FF11}]"), "1");
         replaces.put(Pattern.compile("[\\x{4E8C}\\x{FF12}]"), "2");
         replaces.put(Pattern.compile("[\\x{4E09}\\x{FF13}]"), "3");
         replaces.put(Pattern.compile("[\\x{56DB}\\x{FF14}]"), "4");
@@ -104,6 +105,7 @@ public class Address {
         replaces.put(Pattern.compile("\\x{5C2B}"), "尪");
         replaces.put(Pattern.compile("\\x{8289}"), "竿");
         replaces.put(Pattern.compile("\\x{53A8}"), "廚");
+        replaces.put(Pattern.compile("\\x{53F7}"), "號");
         replaces.put(Pattern.compile("\\x{732A}"), "豬");
         replaces.put(Pattern.compile("\\x{58E0}"), "壟");
         replaces.put(Pattern.compile("\\x{7551}"), "煙");
@@ -141,7 +143,7 @@ public class Address {
         for (Map.Entry<Pattern, String> e : replaces.entrySet()) {
             src = e.getKey().matcher(src).replaceAll(e.getValue());
         }
-        return src;
+        return pNoNum.matcher(src).matches() ? src + "號" : src;
     }
 
     /**
