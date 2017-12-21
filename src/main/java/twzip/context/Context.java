@@ -247,11 +247,9 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
 
         Post5 post5 = null;
         Pattern pTai = Pattern.compile("\\x{81FA}");//臺
-        Pattern pSpacies = Pattern.compile("\\s+");
-        int step = 0, prestep = 0;
-        boolean isInXle = false;
+        Pattern pSpacies = Pattern.compile("[\\x{3000}\\s]+");
         String oriInfo = "";
-        String content = "";
+        String field = "";
         Consumer<Post5> consumer;
 
         public Post5Handler(Consumer<Post5> consumer) {
@@ -260,69 +258,61 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
 
         @Override
         public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
-            if (qName.startsWith("Xml")) {
+            if ("Zip32".equals(qName)) {
                 post5 = new Post5();
-                step = 0;
                 oriInfo = "";
-            } else if (qName.startsWith("欄位")) {
-                step++;
-                isInXle = true;
             }
+            field = qName;
         }
 
         @Override
         public void endElement(String uri, String localName, String qName) throws SAXException {
-            isInXle = false;
-            content = "";
-            if (qName.startsWith("欄位") && consumer != null && post5 != null && step == 4) {
+            field = "";
+            if ("Zip32".equals(qName) && consumer != null && post5 != null) {
                 consumer.accept(post5);
             }
         }
 
         @Override
         public void characters(char[] ch, int start, int length) throws SAXException {
-            if (isInXle) {
-                String str = new String(ch, start, length);
-                if (prestep == step) {
-                    str = content + str;
-                }
-                switch (step) {
-                    case 1:
+            String str = length == 0 ? "" : new String(ch, start, length);
+            if (post5 != null) {
+                switch (field) {
+                    case "Zip5":
                         post5.setZipcode(str);
                         break;
-                    case 2:
-                        if (str.length() > 3) {
-                            post5.setCity(pTai.matcher(str.substring(0, 3)).replaceAll("台"));
-                            post5.setArea(Address.normailize(str.substring(3)));
-                            oriInfo = pSpacies.matcher(str).replaceAll("");
-                        }
+                    case "City":
+                        post5.setCity(pTai.matcher(str).replaceAll("台"));
+                        oriInfo = pSpacies.matcher(str).replaceAll("");
                         break;
-                    case 3:
+                    case "Area":
+                        post5.setArea(Address.normailize(str));
+                        oriInfo += pSpacies.matcher(str).replaceAll("");
+                        break;
+                    case "Road":
                         post5.setAddrinfo(Address.normailize(str));
                         post5.setOriInfo(oriInfo + pSpacies.matcher(str).replaceAll(""));
                         break;
-                    case 4:
+                    case "Scope":
                         post5.setTailInfo(pSpacies.matcher(str).replaceAll(""));
                         break;
                     default:
                 }
-                content = str;
-                prestep = step;
             }
         }
     }
 
-    private void initPost5(Path post5sql) throws Exception {
+    private void initPost5(Path post5xml) throws Exception {
         logger.info("初始化郵遞區號資料庫");
-        if (!Files.exists(post5sql)) {
-            logger.info("下載3+2碼郵遞區號文字檔 103/12(UTF-8)…");
+        if (!Files.exists(post5xml)) {
+            logger.info("下載3+2碼郵遞區號XML檔(UTF-8)…");
             URL website = new URL(appProperies.get("post5url"));
             ReadableByteChannel rbc = Channels.newChannel(website.openStream());
-            try (FileOutputStream fos = new FileOutputStream(post5sql.toFile())) {
+            try (FileOutputStream fos = new FileOutputStream(post5xml.toFile())) {
                 fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
             }
         }
-        if (Files.exists(post5sql)) {
+        if (Files.exists(post5xml)) {
             try (Dao dao = context.getBean("dao", Dao.class)) {
                 final IntSupplier rowAffected = new IntSecquencer(0);
                 dao.dropPost5();
@@ -339,9 +329,8 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
                 final Pattern pLi = Pattern.compile("(\\P{M}{2,}[\\x{91CC}\\x{6751}])[^\\x{8857}]\\p{InCJKUnifiedIdeographs}{2,}");//[里村][^街]
                 //</editor-fold>
                 String strLine;
-                int ra = 0;
                 dao.begin();
-                SAXParserFactory.newInstance().newSAXParser().parse(Files.newInputStream(post5sql, StandardOpenOption.READ), new Post5Handler(new Consumer<Post5>() {
+                SAXParserFactory.newInstance().newSAXParser().parse(Files.newInputStream(post5xml, StandardOpenOption.READ), new Post5Handler(new Consumer<Post5>() {
 
                     @Override
                     public void accept(Post5 post) {
@@ -401,6 +390,7 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
                     }
                 }));
                 dao.commit();
+                int ra = rowAffected.getAsInt();
                 if (ra % 1000 > 0) {
                     logger.debug("共新增3+2碼郵遞區號{}筆", ra);
                 }
@@ -455,7 +445,7 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
                 }
             }
         } else {
-            throw new RuntimeException("3+2碼郵遞區號文字檔(" + post5sql.toAbsolutePath() + ")不存在");
+            throw new RuntimeException("3+2碼郵遞區號XML檔(" + post5xml.toAbsolutePath() + ")不存在");
         }
     }
 
@@ -530,6 +520,7 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
             case "單0之0號至0號":
             case "單0之0號至0號含附號全":
             case "雙0之0號至0號":
+            case "雙0之0號至0號含附號全":
                 pre = (Integer) value[0];
                 nxt = (Integer) value[2];
                 return nxt - pre == 2 ? "laneAlley == 0 and " + ptn : ptn;
@@ -619,6 +610,8 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
                 + ";^%3$d^;null;%1$d.%2$03d;%1$d.999;null;null;(laneAlley == %1$d or (lane == 0 and alleyNum == %3$d))");
         em.put("雙0之0號至0號", "laneNum %% 2 == 0 and ((laneAlley == 0 and number ==  %1$d and addnum >= %2$d) or (laneNum > %1$d and laneNum <= %3$d))"
                 + ";null;null;%1$d.%2$03d;%1$d.999;null;null;(laneAlley == %1$d or laneAlley == %3$d)");
+        em.put("雙0之0號至0號含附號全", "laneNum %% 2 == 0 and ((laneAlley == 0 and number == %1$d and addnum >= %2$d) or (laneNum > %1$d and laneNum < %3$d) or number == %3$d)"
+                + ";null;null;%1$d.%2$03d;%3$d.999;null;null;(laneAlley == %1$d or laneAlley == %3$d)");
         em.put("雙0巷以上", "laneNum %% 2 == 0 and (lane == %1$d or laneNum > %1$d);^%1$d^;null;null;null;null;null;lane == 0 and alleyNum == %1$d");
         em.put("雙0巷以下", "laneNum %% 2 == 0 and (lane == %1$d or laneNum < %1$d);^%1$d^;null;null;null;null;null;lane == 0 and alleyNum == %1$d");
         em.put("雙0巷至0之0號", "laneNum %% 2 == 0 and (lane == %1$d or (laneNum >%1$d and laneNum < %2$d) or (laneAlley == 0 and number == %2$d and addnum <= %3$d))"
