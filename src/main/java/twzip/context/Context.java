@@ -334,14 +334,11 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
 
                     @Override
                     public void accept(Post5 post) {
-                        //修正設定檔錯誤
-                        if ("同平2弄".equals(post.getAddrinfo())) {
-                            post.setAddrinfo("同平巷二弄");
-                        }
                         String ai = post.getAddrinfo();
                         for (Village v : dao.findVillages(post.getCity(), post.getArea())) {
                             if (ai.startsWith(v.getVil())) {
-                                post.setAddrinfo(ai.substring(0, v.getVil().length()) + ' ' + ai.substring(v.getVil().length()));
+//                                post.setAddrinfo(ai.substring(0, v.getVil().length()) + ' ' + ai.substring(v.getVil().length()));
+                                post.setAddrinfo(ai.substring(v.getVil().length()));
                             }
                         }
                         String build = "";
