@@ -90,13 +90,25 @@ public class Zip implements InitializingBean {
             }
         }
         List<Post5> narrowPosts = new ArrayList<>();
-        for (Post5 post : posts) {
-            //再用鄉鎮市區過濾一次，以減少處理筆數
-            if (address.contains(post.getArea())) {
-                narrowPosts.add(post);
+        if (!vil.isEmpty()) {
+            for (Post5 post : posts) {
+                //用村里過濾一次，以減少處理筆數
+                if (vil.equals(post.getVillage())) {
+                    narrowPosts.add(post);
+                }
             }
         }
-        if (!narrowPosts.isEmpty()) {
+        if (narrowPosts.isEmpty()) {
+            for (Post5 post : posts) {
+                //再用鄉鎮市區過濾一次，以減少處理筆數
+                if (address.contains(post.getArea())) {
+                    narrowPosts.add(post);
+                }
+            }
+            if (!narrowPosts.isEmpty()) {
+                B2A(posts, narrowPosts);
+            }
+        }else{
             B2A(posts, narrowPosts);
         }
         //若是都沒有就不用玩了
@@ -120,7 +132,7 @@ public class Zip implements InitializingBean {
             int idx = address.indexOf(post.getArea());
             String src = dist.isEmpty() ? address : idx == -1 ? address : address.substring(idx + post.getArea().length());
             //因為郵局的設定檔把有的"村"移除了
-            String vil2 = vil.length()>2 && (vil.charAt(vil.length() - 1) == '村'||vil.charAt(vil.length() - 1) == '里') ? vil.substring(0, vil.length() - 1) : vil;
+            String vil2 = vil.length() > 2 && (vil.charAt(vil.length() - 1) == '村' || vil.charAt(vil.length() - 1) == '里') ? vil.substring(0, vil.length() - 1) : vil;
             if (!vil.isEmpty() && !post.getAddrinfo().contains(vil2) && pos > -1) {
                 //移除村里干擾
                 src = src.replaceFirst(vil, "");

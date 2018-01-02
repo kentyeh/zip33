@@ -19,6 +19,7 @@ public class Post5 {
     private String zipcode;
     private String city;
     private String area;
+    private String village;
     private String oriInfo;
     private String addrinfo;
     private Integer sec;
@@ -143,6 +144,24 @@ public class Post5 {
      */
     public void setArea(String area) {
         this.area = area;
+    }
+
+    /**
+     * 取得村里(Optional,因應有的Road必須以村里區分)
+     *
+     * @return 村里
+     */
+    public String getVillage() {
+        return village == null ? "" : village;
+    }
+
+    /**
+     * 設定村里(因應有的Road必須以村里區分)
+     *
+     * @param village 村里
+     */
+    public void setVillage(String village) {
+        this.village = village;
     }
 
     /**
@@ -453,6 +472,7 @@ public class Post5 {
             post5.setZipcode(rs.getString("zipcode"));
             post5.setCity(rs.getString("city"));
             post5.setArea(rs.getString("area"));
+            post5.setVillage(rs.getString("village"));
             post5.setOriInfo(rs.getString("oriInfo"));
             post5.setAddrinfo(rs.getString("addrinfo"));
             int iv = rs.getInt("sec");

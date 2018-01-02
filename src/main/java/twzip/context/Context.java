@@ -337,7 +337,7 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
                         String ai = post.getAddrinfo();
                         for (Village v : dao.findVillages(post.getCity(), post.getArea())) {
                             if (ai.startsWith(v.getVil())) {
-//                                post.setAddrinfo(ai.substring(0, v.getVil().length()) + ' ' + ai.substring(v.getVil().length()));
+                                post.setVillage(ai.substring(0, v.getVil().length()));
                                 post.setAddrinfo(ai.substring(v.getVil().length()));
                             }
                         }
@@ -398,12 +398,14 @@ public class Context implements InitializingBean, DisposableBean, ApplicationCon
                 Iterator<Post5> posts = dao.findAllPost5();
                 while (posts.hasNext()) {
                     Post5 post = posts.next();
-                    wr.write("insert into post5(zipcode,city,area,oriInfo,addrinfo,sec,tailinfo,lane,alley,parnums,parnume,floors,floore,express,boundary) values('");
+                    wr.write("insert into post5(zipcode,city,area,village,oriInfo,addrinfo,sec,tailinfo,lane,alley,parnums,parnume,floors,floore,express,boundary) values('");
                     wr.write(post.getZipcode());
                     wr.write("',\n'");
                     wr.write(post.getCity());
                     wr.write("','");
                     wr.write(post.getArea());
+                    wr.write("','");
+                    wr.write(post.getVillage());
                     wr.write("','");
                     wr.write(post.getOriInfo());
                     wr.write("','");

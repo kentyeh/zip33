@@ -39,6 +39,7 @@ public interface Dao extends Transactional<Dao>, AutoCloseable {
             + "zipcode varchar(5),"
             + "city    varchar(3),"
             + "area varchar(4),"
+            + "village varchar(5),"
             + "oriInfo varchar(30),"
             + "addrinfo varchar(30),"
             + "sec int,"
@@ -99,9 +100,9 @@ public interface Dao extends Transactional<Dao>, AutoCloseable {
      * @param post5
      * @return
      */
-    @SqlUpdate("INSERT INTO post5(zipcode,city,area,oriInfo,addrinfo,sec,tailInfo,lane,"
+    @SqlUpdate("INSERT INTO post5(zipcode,city,area,village,oriInfo,addrinfo,sec,tailInfo,lane,"
             + "alley,parnums,parnume,floors,floore,express,boundary)"
-            + " values(:zipcode, :city, :area, :oriInfo, :addrinfo, :sec, :tailInfo, :lane,"
+            + " values(:zipcode, :city, :area, :village, :oriInfo, :addrinfo, :sec, :tailInfo, :lane,"
             + " :alley, :parnums, :parnume, :floors, :floore, :express, :boundary)")
     @GetGeneratedKeys
     long insertPost5(@BindBean Post5 post5);
