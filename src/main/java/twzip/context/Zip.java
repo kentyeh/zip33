@@ -93,7 +93,7 @@ public class Zip implements InitializingBean {
         if (!vil.isEmpty()) {
             for (Post5 post : posts) {
                 //用村里過濾一次，以減少處理筆數
-                if (vil.equals(post.getVillage())) {
+                if (vil.equals(post.getVillage()) && address.contains(post.getAddrinfo())) {
                     narrowPosts.add(post);
                 }
             }
