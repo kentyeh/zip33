@@ -3,7 +3,9 @@ package twzip.context;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.logging.log4j.LogManager;
@@ -44,6 +46,25 @@ public class Zip implements InitializingBean {
     Pattern pLn = Pattern.compile("(\\d+)\\x{9130}");//xx鄰
     Pattern pLi = Pattern.compile("^(\\P{M}{2,}[\\x{91CC}\\x{6751}])[^\\x{8857}]\\p{InCJKUnifiedIdeographs}{2,}");//[里村][^街]
 
+    private static final Map<String, String> abbrCity = new HashMap<>();
+
+    static {
+        abbrCity.put("南投市", "南投縣");
+        abbrCity.put("員林市", "彰化縣");
+        abbrCity.put("太保市", "嘉義縣");
+        abbrCity.put("宜蘭市", "宜蘭縣");
+        abbrCity.put("屏東市", "屏東縣");
+        abbrCity.put("彰化市", "彰化縣");
+        abbrCity.put("斗6市", "雲林縣");
+        abbrCity.put("朴子市", "嘉義縣");
+        abbrCity.put("竹北市", "新竹縣");
+        abbrCity.put("台東市", "台東縣");
+        abbrCity.put("花蓮市", "花蓮縣");
+        abbrCity.put("苗栗市", "苗栗縣");
+        abbrCity.put("頭份市", "苗栗縣");
+        abbrCity.put("馬公市", "澎湖縣");
+    }
+
     @Override
     public void afterPropertiesSet() throws Exception {
         rootAddr = new Address();
@@ -72,6 +93,12 @@ public class Zip implements InitializingBean {
      */
     public List<Post5> getZip(String address) {
         address = Address.normailize(address);
+        for (Map.Entry<String, String> abbr : abbrCity.entrySet()) {
+            if (address.startsWith(abbr.getKey())) {
+                address = abbr.getValue() + address;
+                break;
+            }
+        }
         //先用頭3個字作測試，找出市屬郵遞區號
         String city = address.substring(0, 3), dist = "", vil = "";
         List<Post5> posts = dao.findByCity(city);
@@ -108,7 +135,7 @@ public class Zip implements InitializingBean {
             if (!narrowPosts.isEmpty()) {
                 B2A(posts, narrowPosts);
             }
-        }else{
+        } else {
             B2A(posts, narrowPosts);
         }
         //若是都沒有就不用玩了
