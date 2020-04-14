@@ -3,8 +3,8 @@ package twzip.controller;
 import com.gargoylesoftware.htmlunit.BrowserVersion;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.html.HtmlTableCell;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
-import com.gargoylesoftware.htmlunit.html.HtmlHeading1;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import java.io.IOException;
 import org.apache.logging.log4j.Logger;
@@ -36,7 +36,7 @@ public class TestIntegratedWithHunitUnitOnly {
         this.httpPort = httpPort;
         logger.debug("http port is {}", httpPort);
         this.contextPath = contextPath;
-        webClient = new WebClient(BrowserVersion.FIREFOX_52);
+        webClient = new WebClient(BrowserVersion.FIREFOX);
         webClient.getOptions().setUseInsecureSSL(true);
     }
 
@@ -56,26 +56,15 @@ public class TestIntegratedWithHunitUnitOnly {
     }
 
     @Test
-    public void testMyInfo() throws IOException {
-        String url = String.format("http://localhost:%d/%s/user/myinfo", httpPort, contextPath);
-        logger.debug("Test myinfo with {}", url);
+    public void testZip() throws IOException {
+        String url = String.format("http://localhost:%d/%s/", httpPort, contextPath);
+        logger.debug("Test index with {}", url);
         HtmlPage beforeInfoPage = webClient.getPage(url);
         HtmlForm form = beforeInfoPage.getFirstByXPath("//form");
-        form.getInputByName("j_username").setValueAttribute("admin");
-        form.getInputByName("j_password").setValueAttribute("admin");
-        HtmlPage myInfoPage = form.getOneHtmlElementByAttribute("input", "type", "submit").click();
-        HtmlHeading1 h1 = myInfoPage.getFirstByXPath("//h1");
-        assertThat("Fail to get My Info", h1.getTextContent(), is(containsString("admin")));
+        form.getInputByName("addr").setValueAttribute("台北市萬華區大理街132之10號");
+        HtmlPage zipPage = form.getOneHtmlElementByAttribute("input", "type", "submit").click();
+        HtmlTableCell td = zipPage.getFirstByXPath("//td[@id='zipcode']");
+        assertThat("Fail to zip", td.getTextContent(), is(containsString("108021")));
     }
 
-    @Test(dependsOnMethods = "testMyInfo")
-    public void logout() throws IOException {
-        String url = String.format("http://localhost:%d/%s/", httpPort, contextPath);
-        logger.debug("Integration Test: logout with {}", url);
-        HtmlPage homePage = webClient.getPage(url);
-        HtmlForm form = homePage.getFirstByXPath("//form");
-        homePage = form.getOneHtmlElementByAttribute("input", "type", "submit").click();
-        logger.debug("logout redirect to {}", homePage.getUrl());
-        assertThat("logout failed ", homePage.getUrl().toString(), is(containsString("/index")));
-    }
 }

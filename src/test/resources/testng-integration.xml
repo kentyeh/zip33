@@ -7,9 +7,9 @@
         <parameter name="http.port" value="${test.http.port}"/> 	
         <classes>
             <!--                   
-            -->              
+            -->
             <class name="twzip.controller.TestIntegration"/>
-	    <class name="com.spring.controller.TestIntegratedWithHunitUnitOnly"/>
+	    <class name="twzip.controller.TestIntegratedWithHunitUnitOnly"/>
         </classes>        
         <!--groups>
             <run>

@@ -2,6 +2,17 @@
 <!DOCTYPE Configure PUBLIC "-//Mort Bay Consulting//DTD Configure//EN" "http://www.eclipse.org/jetty/configure.dtd">
 
 <Configure class="org.eclipse.jetty.webapp.WebAppContext">
+    <Call class="twzip.model.PreDataUtil" name="process">
+        <Arg>${project.build.testOutputDirectory}</Arg>
+    </Call>
+    <Call class="org.h2.tools.RunScript" name="execute">
+        <Arg>jdbc:h2:${project.build.testOutputDirectory}/zip33;USER=sa;PASSWORD=${project.artifactId};DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=TRUE;MODE=PostgreSQL</Arg>
+        <Arg>sa</Arg>
+        <Arg>${project.artifactId}</Arg>
+        <Arg>${project.build.testOutputDirectory}/zip33.sql</Arg>
+        <Arg><Get class="java.nio.charset.StandardCharsets" name="UTF_8"/></Arg>
+        <Arg><Get class="java.lang.Boolean" name="TRUE"/></Arg>
+    </Call>
     <Call class="twzip.context.H2Server" name="start">
         <Arg>-tcp,-tcpAllowOthers,-tcpDaemon,-web,-webAllowOthers,-webDaemon,-baseDir,${project.build.testOutputDirectory}</Arg>
     </Call>
@@ -14,11 +25,12 @@
                 <Set name="xaDataSourceClassName">org.h2.jdbcx.JdbcDataSource</Set>
                 <Set name="UniqueResourceName">${jndi.dsname}</Set>
                 <Set name="testQuery">SELECT 1 </Set>
+                <Set name="localTransactionMode">true</Set>
                 <Get name="xaProperties">
                     <Call name="setProperty">
                         <Arg>URL</Arg>
                         <!--<Arg>jdbc:h2:tcp://127.0.0.1/~/post5;AUTO_SERVER=TRUE;INIT=runscript from '${project.build.testOutputDirectory}/testSchema.sql'</Arg>-->
-                        <Arg>jdbc:h2:tcp://127.0.0.1/${project.build.testOutputDirectory}/post5;USER=sa;PASSWORD=${project.artifactId};AUTO_SERVER=TRUE</Arg>
+                        <Arg>jdbc:h2:tcp://127.0.0.1/${project.build.testOutputDirectory}/zip33;USER=sa;PASSWORD=${project.artifactId};AUTO_SERVER=TRUE;MODE=PostgreSQL</Arg>
                     </Call>
                     <Call name="setProperty">
                         <Arg>user</Arg>

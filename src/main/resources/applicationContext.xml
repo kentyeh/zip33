@@ -13,19 +13,21 @@
     <!--support JSR-250-->
     <bean class="org.springframework.context.annotation.CommonAnnotationBeanPostProcessor"/>
 
-    <!-- defind application variables-->
-    <util:map id="appProperies" map-class="java.util.HashMap" key-type="java.lang.String" value-type="java.lang.String">
-        <entry key="jndi.dataSource.name" value="${jndi.dsname}" />
-        <entry key="i18n.localeParam" value="locale" />
-        <entry key="resfolder" value="${project.build.testOutputDirectory}" />
-        <entry key="i18n.defaultLocale" value="zh_TW" />
-        <entry key="post5url" value="http://download.post.gov.tw/post/download/Xml_10612.xml" />
-    </util:map>
-
-    <jee:jndi-lookup id="dataSource" jndi-name="#{appProperies['jndi.dataSource.name']}" 
+    <jee:jndi-lookup id="dataSource" jndi-name="${jndi.dsname}" 
                      resource-ref="true" cache="false" lookup-on-startup="false" expected-type="javax.sql.DataSource"/>
+    
+    <bean id="jdbi" class="org.jdbi.v3.core.Jdbi" factory-method="create"  c:dataSource-ref="dataSource"/>
+<!--    <bean class="org.springframework.beans.factory.config.MethodInvokingBean">
+        <property name="targetObject" ref="jdbi"/>
+        <property name="targetMethod" value="installPlugin" />
+        <property name="arguments">
+            <util:list value-type="org.jdbi.v3.core.spi.JdbiPlugin">
+                <bean class="org.jdbi.v3.sqlobject.SqlObjectPlugin"/>
+            </util:list>
+        </property>
+    </bean>-->
 
-    <bean id="zip" class="twzip.context.Zip"/>   
+    <bean id="zip" class="twzip.context.Zip" depends-on="dao"/>   
     <!--Import relative configuration-->
     <import resource="applicationContext-mvc.xml"/>
 </beans>

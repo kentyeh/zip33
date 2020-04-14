@@ -16,36 +16,60 @@
     <bean class="org.springframework.context.annotation.CommonAnnotationBeanPostProcessor"/> 
     
     <!-- defind application variables-->
-    <util:map id="appProperies" map-class="java.util.HashMap" key-type="java.lang.String" value-type="java.lang.String">
-        <!--<entry key="jdbc.url" value="jdbc:h2:${project.build.testOutputDirectory}/post5;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;TRACE_LEVEL_SYSTEM_OUT=0;TRACE_LEVEL_FILE=4" />-->
-        <entry key="jdbc.url" value="jdbc:h2:${project.build.testOutputDirectory}/post5;USER=sa;PASSWORD=${project.artifactId};DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE" />
-        <entry key="jdbc.username" value="sa" />
-        <entry key="i18n.localeParam" value="locale" />
-        <entry key="i18n.defaultLocale" value="zh_TW" />
-        <entry key="resfolder" value="${project.build.testOutputDirectory}" />
-        <entry key="post5url" value="http://download.post.gov.tw/post/download/Xml_10510.xml" />
-    </util:map>
+    <bean id="resfolder" class="java.lang.String">
+        <constructor-arg value="${project.build.testOutputDirectory}"/>
+    </bean>
+    <bean id="jdbcUrl" class="java.lang.String">
+        <constructor-arg value="jdbc:h2:${project.build.testOutputDirectory}/zip33;USER=sa;PASSWORD=${project.artifactId};DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE"/>
+    </bean>
+    <bean id="jdbcUser" class="java.lang.String">
+        <constructor-arg value="sa"/>
+    </bean>
+    <bean id="jdbcPasswd" class="java.lang.String">
+        <constructor-arg value="${project.artifactId}"/>
+    </bean>
     
-    <!--DataSource setting -->
+    <!-- 刪除H2資料庫後並重建 -->
+    <bean class="org.springframework.beans.factory.config.MethodInvokingBean">
+        <property name="targetClass" value="twzip.model.PreDataUtil" />
+        <property name="targetMethod" value="process" />
+        <property name="arguments">
+            <util:list value-type="java.lang.String">
+                <value>${project.build.testOutputDirectory}</value>
+            </util:list>
+        </property>
+    </bean>
+    
+    <util:constant id="utf8" static-field="java.nio.charset.StandardCharsets.UTF_8" />
+    <bean class="org.springframework.beans.factory.config.MethodInvokingBean">
+        <property name="targetClass" value="org.h2.tools.RunScript" />
+        <property name="targetMethod" value="execute" />
+        <property name="arguments">
+            <list>
+                <ref bean="jdbcUrl"/>
+                <ref bean="jdbcUser"/>
+                <ref bean="jdbcPasswd"/>
+                <value type="java.lang.String">${project.build.testOutputDirectory}/zip33.sql</value>
+                <ref bean="utf8"/>
+                <value type="java.lang.Boolean">true</value>
+            </list>
+        </property>
+    </bean>
+    
+    <!--DataSource setting  -->
     <bean id="dataSource" class="org.h2.jdbcx.JdbcConnectionPool" destroy-method="dispose">
         <constructor-arg>
             <bean class="org.h2.jdbcx.JdbcDataSource">
-                <property name="URL" value="#{appProperies['jdbc.url']}"/>
-                <property name="user" value="#{appProperies['jdbc.username']}"/>
-                <property name="password" value="${project.artifactId}"/>
+                <property name="URL"><ref bean="jdbcUrl"/></property>
+                <property name="user"><ref bean="jdbcUser"/></property>
+                <property name="password"><ref bean="jdbcPasswd"/></property>
             </bean>
         </constructor-arg>
-    </bean> 
-    <!-- Buildin test database.測試資料庫-->       
-<!--    <jdbc:initialize-database data-source="dataSource">
-        <jdbc:script location="classpath:testSchema.sql" encoding="UTF-8" execution="INIT"/>
-    </jdbc:initialize-database>-->
+    </bean>
     
+    <bean id="jdbi" class="org.jdbi.v3.spring4.JdbiFactoryBean" c:dataSource-ref="dataSource"/>
     
-    <bean id="crawlerService" class="twzip.context.CrawlerService" lazy-init="true"/>
-    <bean id="crawlerRunner" class="twzip.context.CrawlerRunner" lazy-init="true" scope="prototype"/>
-    
-    <bean id="zip" class="twzip.context.Zip"/>  
+    <bean id="zip" class="twzip.context.Zip" depends-on="dao" />  
      
     <!--controller-->
     <context:component-scan base-package="twzip.controller"/>

@@ -2,27 +2,29 @@ package twzip.context;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationContext;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
-import org.springframework.expression.spel.SpelEvaluationException;
 import org.springframework.expression.spel.SpelParseException;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import twzip.model.Address;
+import twzip.model.Cas;
 import twzip.model.Dao;
-import twzip.model.Post5;
 import twzip.model.Village;
+import twzip.model.Zip33;
 
 /**
  * 取得地址之郵遞區號
@@ -31,17 +33,37 @@ import twzip.model.Village;
  */
 public class Zip implements InitializingBean {
 
-    @Autowired
-    @Qualifier("readOnlyDao")
-    Dao dao;
-    @Autowired
-    SpelExpressionParser spel;
+    private org.springframework.context.ApplicationContext ctx;
+    private Dao dao;
+    private SpelExpressionParser spel;
     Address rootAddr;
     EvaluationContext spelCtx;
+
+    @Autowired
+    public void setCtx(ApplicationContext ctx) {
+        this.ctx = ctx;
+    }
+
+    @Autowired
+    public void setRootAddr(Address rootAddr) {
+        this.rootAddr = rootAddr;
+    }
+
+    @Autowired
+    public void setDao(Dao dao) {
+        this.dao = dao;
+    }
+
+    @Autowired
+    public void setSpel(SpelExpressionParser spel) {
+        this.spel = spel;
+    }
 
     private static final Logger logger = LogManager.getLogger(Zip.class);
     Pattern pVillageEnd = Pattern.compile("[\\x{9109}\\x{93AE}\\x{6751}\\x{91CC}]$");
     Pattern pSpacies = Pattern.compile("\\s+");
+    Pattern pNum = Pattern.compile("\\d+");
+    Pattern pEnd = Pattern.compile("^[\\x{865F}\\x{6A13}\\x{5C64}Ff]");//開頭為號或樓
     Pattern pSection = Pattern.compile("(\\d+)\\x{6BB5}");//xx段
     Pattern pLn = Pattern.compile("(\\d+)\\x{9130}");//xx鄰
     Pattern pLi = Pattern.compile("^(\\P{M}{2,}[\\x{91CC}\\x{6751}])[^\\x{8857}]\\p{InCJKUnifiedIdeographs}{2,}");//[里村][^街]
@@ -67,22 +89,53 @@ public class Zip implements InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        rootAddr = new Address();
         spelCtx = new StandardEvaluationContext(rootAddr);
     }
 
-    private <T> void B2A(List<T>... lists) {
-        if (lists.length > 1) {
-            List<T> a = lists[0];
-            List<T> b = lists[1];
-            if (a.isEmpty() || (!b.isEmpty() && b.size() < a.size())) {
-                a.clear();
-                a.addAll(b);
-            }
-            for (int i = 1; i < lists.length; i++) {
-                lists[i].clear();
+    private <T> void B2A(List<T> a, List<T> b) {
+        if (a.isEmpty() || (!b.isEmpty() && b.size() < a.size())) {
+            a.clear();
+            a.addAll(b);
+        }
+    }
+
+    public List<Zip33> distinct(List<Zip33> zips) {
+        Set<String> zipcodes = new HashSet<>();
+        for (Iterator<Zip33> itor = zips.iterator(); itor.hasNext();) {
+            Zip33 zip = itor.next();
+            if (zipcodes.contains(zip.getZipcode())) {
+                itor.remove();
+            } else {
+                zipcodes.add(zip.getZipcode());
             }
         }
+        return zips;
+    }
+
+    public List<Zip33> deFull(List<Zip33> zips) {
+        List<Zip33> others = new ArrayList<>(zips);
+        for (Iterator<Zip33> itor = others.iterator(); itor.hasNext();) {
+            Zip33 zip = itor.next();
+            if (zip.getScope().contains("全") && !zip.getScope().endsWith("附號全")) {
+                itor.remove();
+            }
+        }
+        others = distinct(others);
+        return others.size() == 1 ? others : zips;
+    }
+
+    public List<Cas> deLike(List<Cas> cases) {
+        Cas cas = null;
+        for (Iterator<Cas> itor = cases.iterator(); itor.hasNext();) {
+            if (cas == null) {
+                cas = itor.next();
+            } else {
+                if (cas.getStreet().contains(itor.next().getStreet())) {
+                    itor.remove();
+                }
+            }
+        }
+        return cases;
     }
 
     /**
@@ -91,8 +144,11 @@ public class Zip implements InitializingBean {
      * @param address 地址
      * @return
      */
-    public List<Post5> getZip(String address) {
-        address = Address.normailize(address);
+    public List<Zip33> getZip33(String address) {
+        if (address.length() < 9) {
+            return Collections.EMPTY_LIST;
+        }
+        address = rootAddr.normailize(address);
         for (Map.Entry<String, String> abbr : abbrCity.entrySet()) {
             if (address.startsWith(abbr.getKey())) {
                 address = abbr.getValue() + address;
@@ -100,328 +156,217 @@ public class Zip implements InitializingBean {
             }
         }
         //先用頭3個字作測試，找出市屬郵遞區號
-        String city = address.substring(0, 3), dist = "", vil = "";
-        List<Post5> posts = dao.findByCity(city);
-        if (posts.isEmpty()) {
+        String city = address.substring(0, 3), area = "", vil = "";
+        List<Cas> cases = dao.findCasByCity(city);
+        if (cases.isEmpty()) {
             //找不到時再用頭2個字作測試，找出市屬郵遞區號
             city = address.substring(0, 2);
-            posts = dao.findByCity(city);
-        }
-        for (Village v : dao.findVillages(city)) {
-            if (dist.isEmpty() && address.contains(v.getDist())) {
-                dist = v.getDist();
+            cases = dao.findCasByCity(city);
+            //找不到再找區域
+            if (cases.isEmpty()) {
+                cases = dao.findCasByArea(city);
             }
-            if (dist.equals(v.getDist()) && address.contains(v.getVil())) {
+        }
+
+        for (Village v : dao.findVilByCity(city)) {
+            if (area.isEmpty() && address.contains(v.getArea())) {
+                area = v.getArea();
+            }
+            if (area.equals(v.getArea()) && address.contains(v.getVil())) {
                 vil = v.getVil();
                 break;
             }
         }
-        List<Post5> narrowPosts = new ArrayList<>();
+        List<Cas> narrowCases = new ArrayList<>();
         if (!vil.isEmpty()) {
-            for (Post5 post : posts) {
+            for (Cas cas : cases) {
                 //用村里過濾一次，以減少處理筆數
-                if (vil.equals(post.getVillage()) && address.contains(post.getAddrinfo())) {
-                    narrowPosts.add(post);
+                if (vil.equals(cas.getVillage()) && address.contains(cas.getStreet())) {
+                    narrowCases.add(cas);
                 }
+            }
+            //地址移除村里
+            for (Cas cas : narrowCases) {
+                int pos = address.indexOf(cas.getVillage());
+                address = address.substring(pos + cas.getVillage().length());
+                break;
             }
         }
-        if (narrowPosts.isEmpty()) {
-            for (Post5 post : posts) {
-                //再用鄉鎮市區過濾一次，以減少處理筆數
-                if (address.contains(post.getArea())) {
-                    narrowPosts.add(post);
+        if (narrowCases.isEmpty()) {
+            //用鄉鎮市區過濾一次，以減少處理筆數
+            for (Cas cas : cases) {
+                if (address.contains(cas.getArea())) {
+                    narrowCases.add(cas);
                 }
             }
-            if (!narrowPosts.isEmpty()) {
-                B2A(posts, narrowPosts);
+            if (!narrowCases.isEmpty()) {
+                //地址移除鄉鎮市區
+                for (Cas cas : narrowCases) {
+                    int pos = address.indexOf(cas.getArea());
+                    address = address.substring(pos + cas.getArea().length());
+                    break;
+                }
+                B2A(cases, narrowCases);
             }
         } else {
-            B2A(posts, narrowPosts);
+            B2A(cases, narrowCases);
         }
         //若是都沒有就不用玩了
-        if (posts.isEmpty()) {
-            return posts;
+        if (cases.isEmpty()) {
+            return Collections.EMPTY_LIST;
         }
-        if (address.charAt(2) == '縣' || address.charAt(2) == '市' || address.charAt(2) == '島' || address.charAt(2) == '台') {
-            address = address.substring(3);
+        //移除可能的村里
+        if (!vil.isEmpty()) {
+            int pos = address.indexOf(vil);
+            if (pos > -1) {
+                address = address.substring(pos + vil.length());
+            }
         }
         Matcher m = pLn.matcher(address);
         int ln = m.find() ? Integer.parseInt(m.group(1), 10) : 0;
         if (ln > 0) {
-            //dd鄰從來不會出現在addinfo內，所以移除以干擾
+            //dd鄰從來不會出現在addinfo內，所以移除以免干擾
             address = address.substring(0, m.start()) + address.substring(m.end());
         }
+        //街道過濾
+        for (Iterator<Cas> iter = cases.iterator(); iter.hasNext();) {
+            Cas cas = iter.next();
+            if (!address.contains(cas.getStreet())) {
+                iter.remove();
+            }
+        }
+        //dd段過濾
         m = pSection.matcher(address);
-        int section = m.find() ? Integer.parseInt(m.group(1), 10) : 0;
-        int pos = address.indexOf(vil);
-        //addrInfo的片段，一定都要被地址內都找到才算數
-        for (Post5 post : posts) {
-            int idx = address.indexOf(post.getArea());
-            String src = dist.isEmpty() ? address : idx == -1 ? address : address.substring(idx + post.getArea().length());
-            //因為郵局的設定檔把有的"村"移除了
-            String vil2 = vil.length() > 2 && (vil.charAt(vil.length() - 1) == '村' || vil.charAt(vil.length() - 1) == '里') ? vil.substring(0, vil.length() - 1) : vil;
-            if (!vil.isEmpty() && !post.getAddrinfo().contains(vil2) && pos > -1) {
-                //移除村里干擾
-                src = src.replaceFirst(vil, "");
-            }
-            String[] infos = post.getAddrinfo().split("\\s+");
-            for (int i = 0; i < infos.length; i++) {
-                idx = src.indexOf(infos[i]);
-                if (i == 0) {
-                    post.setFirstMatchesPos(idx);
-                }
-                if (idx == -1) {
-                    if (pVillageEnd.matcher(infos[i]).find()) {
-                        idx = infos[i].length();
-                    } else {
-                        break;
-                    }
-                } else {
-                    src = src.substring(idx + infos[i].length());
-                    if (i == infos.length - 1) {
-                        post.setRemark(src);
-                        narrowPosts.add(post);
-                    }
+        if (m.find()) {
+            int secno = Integer.parseInt(m.group(1), 10);
+            for (Iterator<Cas> iter = cases.iterator(); iter.hasNext();) {
+                Cas cas = iter.next();
+                if (cas.getSec() != secno) {
+                    iter.remove();
                 }
             }
+            address = address.substring(m.end());
         }
-        //臺中市西屯區中清路四十三巷國泰一弄 vs 臺中市西屯區中清路　43巷全;
-        if (narrowPosts.size() > 1) {
-            Collections.sort(narrowPosts, new Comparator<Post5>() {
-
-                @Override
-                public int compare(Post5 o1, Post5 o2) {
-                    return o1.getAddrinfo().length() == o2.getAddrinfo().length()
-                            ? o1.getAddrinfo().compareTo(o2.getAddrinfo())
-                            : o1.getAddrinfo().length() > o2.getAddrinfo().length() ? -1
-                                    : 1;
-                }
+        //若是都沒有就不用玩了
+        if (cases.isEmpty()) {
+            return Collections.EMPTY_LIST;
+        }
+        List<Zip33> sinkZips = new ArrayList<>();
+        if (cases.size() > 1) {
+            Collections.sort(cases, (o1, o2) -> {
+                return o2.getStreet().length() - o1.getStreet().length();
             });
-            Post5 fp = narrowPosts.get(0);
-            boolean maxmatched = true;
-            posts.clear();
-            posts.add(fp);
-            for (int i = 1; i < narrowPosts.size(); i++) {
-                if (fp.getAddrinfo().equals(narrowPosts.get(i).getAddrinfo())) {
-                    posts.add(narrowPosts.get(i));
-                } else if (fp.getAddrinfo().length() != narrowPosts.get(i).getAddrinfo().length()
-                        || !fp.getAddrinfo().contains(narrowPosts.get(i).getAddrinfo())) {
-                    maxmatched = false;
-                    break;
-                }
-            }
-            if (maxmatched) {
-                if (posts.size() == 1) {
-                    return posts;
-                } else {
-                    B2A(narrowPosts, posts);
-                }
-            }
+            deLike(cases);
         }
-        int lane = 0;
-        int alley = 0;
-        float partialNumber = 0f;
-        int floor = 0;
-        if (narrowPosts.isEmpty()) {
-            //沒有一個全數符合，不用再處理了
-            return narrowPosts;
-        } else if (narrowPosts.size() == 1) {
-            return narrowPosts;
-        } else {
-            B2A(posts, narrowPosts);
-            List<Post5> laneAlleyPosts = new ArrayList<>();
-            List<Post5> laneOrAlleyPosts = new ArrayList<>();
-            List<Post5> boundaryPosts = new ArrayList<>();
-            List<Post5> dgBoundaryPosts = new ArrayList<>();
-            for (Post5 post : posts) {
-                Address addr = Address.parse(post.getRemark());
-                if (lane == 0 && addr.getLane() > 0) {
-                    lane = addr.getLane();
+        if (cases.size() == 1) {
+            List<Zip33> zips = dao.findZipByCas(cases.get(0));
+            if (zips.size() > 1) {
+                //找大宗段,應避免像"松江路" "雙 190號至 192號" 的大宗段為"松江"
+                String bigAddr = address;
+                m = pNum.matcher(address);
+                while (m.find()) {
+                    bigAddr = address.substring(m.end());
                 }
-                if (alley == 0 && addr.getAlley() > 0) {
-                    alley = addr.getAlley();
+                bigAddr = pEnd.matcher(bigAddr).find() ? bigAddr.substring(1) : bigAddr;//開頭為號或樓
+                sinkZips = new ArrayList<>();
+                for (Zip33 zip : zips) {
+                    if (!zip.getRecognition().isEmpty() && bigAddr.contains(zip.getRecognition())) {
+                        sinkZips.add(zip);
+                    }
                 }
-                if (partialNumber == 0 && addr.getAddnum() > 0) {
-                    partialNumber = addr.getPartialNum();
+                if (!sinkZips.isEmpty()) {
+                    B2A(zips, sinkZips);
+                    sinkZips = new ArrayList<>();
                 }
-                if (floor == 0 && addr.getFloor() != 0) {
-                    floor = addr.getFloor();
+                Address paddr = ctx.getBean(Address.class, address);
+                if (zips.size() > 1) {
+                    if (!paddr.getBuild().isEmpty()) {
+                        for (Iterator<Zip33> itor = zips.iterator(); itor.hasNext();) {
+                            if (!itor.next().getExpress().contains("build")) {
+                                itor.remove();
+                            }
+                        }
+                    }
                 }
-                addr.setLn(ln);
-//                if (post.getSec() == section) {
-                try {
-                    Expression exp = spel.parseExpression(post.getExpress());
-                    rootAddr.assign(addr);
-                    if (exp.getValue(spelCtx, Boolean.class)) {
-                        //記著符合公式的設定
-                        narrowPosts.add(post);
-                        if (lane > 0 && post.getLane() != null && post.getLane().contains(String.format("^%d^", lane))
-                                && alley > 0 && post.getAlley() != null && post.getAlley().contains(String.format("^%d^", alley))) {
-                            laneAlleyPosts.add(post);
+                if (zips.size() > 1) {
+                    List<Zip33> narrowZips = new ArrayList<>(zips.size());
+                    List<Zip33> boundryZips = new ArrayList<>(zips.size());
+                    for (Zip33 zip : zips) {
+                        Expression exp = null;
+                        try {
+                            exp = spel.parseExpression(zip.getExpress());
+                            rootAddr.assign(paddr);
+                            if (Boolean.TRUE.equals(exp.getValue(spelCtx, Boolean.class))) {
+                                narrowZips.add(zip);
+                                boolean sink = zip.isSinkable();
+                                if (sink) {
+                                    sink = sink && (zip.getLane() == null || zip.getLane() == paddr.getLanef());
+                                    sink = sink && (zip.getAlley() == null || zip.getAlley() == paddr.getAlleyf());
+                                    sink = sink && (zip.getParnums() == null || (zip.getParnums() <= paddr.getNumberf() && paddr.getNumberf() <= zip.getParnume()));
+                                    sink = sink && (zip.getFloors() == null || (zip.getFloors() <= paddr.getFloor() && paddr.getFloor() <= zip.getFloore()));
+                                    if (sink) {
+                                        sinkZips.add(zip);
+                                    }
+                                }
+                            }
+                            if (paddr.canDowngrade()) {
+                                rootAddr.assign(paddr.downgrade());
+                                if (Boolean.TRUE.equals(exp.getValue(spelCtx, Boolean.class))) {
+                                    boundryZips.add(zip);
+                                }
+                            }
+                        } catch (SpelParseException ex) {
+                            logger.error(ex.getMessage(), ex);
+                            break;
+                        }
+                    }
+                    if (!sinkZips.isEmpty()) {
+                        zips = distinct(sinkZips);
+                        sinkZips = new ArrayList<>();
+                        for (Zip33 zip : zips) {
+                            if (zip.getParnumRng() != null || zip.getFloorRng() != null) {
+                                sinkZips.add(zip);
+                            }
+                        }
+                        if (sinkZips.isEmpty()) {
+                            return zips;
                         } else {
-                            if (lane > 0 && post.getLane() != null && post.getLane().contains(String.format("^%d^", lane))) {
-                                //額外有符合巷的設定
-                                laneOrAlleyPosts.add(post);
+                            if (sinkZips.size() == 1) {
+                                return sinkZips;
+                            } else {
+                                zips = new ArrayList<>(sinkZips);
+                                Collections.sort(zips, (z1, z2) -> {
+                                    return z1.compareRng(z2);
+                                });
+                                sinkZips = new ArrayList<>();
+                                Zip33 target = null;
+                                for (Zip33 zip : zips) {
+                                    if (sinkZips.isEmpty()) {
+                                        sinkZips.add(zip);
+                                        target = zip;
+                                    } else {
+                                        int c = target.compareRng(zip);
+                                        if (c == 0) {
+                                            sinkZips.add(zip);
+                                        } else if (c > 0) {
+                                            sinkZips.clear();
+                                            sinkZips.add(zip);
+                                            target = zip;
+                                        }
+                                    }
+                                }
+                                return sinkZips.isEmpty() ? zips : sinkZips;
                             }
-                            if (alley > 0 && post.getAlley() != null && post.getAlley().contains(String.format("^%d^", alley))) {
-                                //額外有符合弄的設定
-                                laneOrAlleyPosts.add(post);
-                            }
                         }
-                    }
-                    if (addr.canDowngrade()) {
-                        rootAddr.assign(addr.downgrade());
-                        if (exp.getValue(spelCtx, Boolean.class)) {
-                            dgBoundaryPosts.add(post);
-                        }
-                    }
-                    if (narrowPosts.isEmpty() && laneOrAlleyPosts.isEmpty()) {
-                        exp = spel.parseExpression(post.getBoundary());
-                        if (exp.getValue(spelCtx, Boolean.class)) {
-                            boundaryPosts.add(post);
-                        }
-                    }
-                } catch (SpelParseException | SpelEvaluationException | IllegalStateException ex) {
-                    logger.error(ex.getMessage(), ex);
-                    logger.fatal("can't parse [{}] with {}", addr, post);
-                }
-//                }
-            }
-            if (!laneAlleyPosts.isEmpty()) {
-                if (laneAlleyPosts.size() == 1) {
-                    return laneAlleyPosts;
-                } else {
-                    B2A(posts, laneAlleyPosts, laneOrAlleyPosts, boundaryPosts, dgBoundaryPosts);
-                    narrowPosts.clear();
-                }
-            } else if (!laneOrAlleyPosts.isEmpty()) {
-                if (laneOrAlleyPosts.size() == 1) {
-                    return laneOrAlleyPosts;
-                } else if (!laneAlleyPosts.isEmpty()) {
-                    //若有符合巷弄的設定，以巷弄的設定優先
-                    B2A(posts, laneOrAlleyPosts, laneAlleyPosts, boundaryPosts, dgBoundaryPosts);
-                    narrowPosts.clear();
-                }
-            } else if (!narrowPosts.isEmpty()) {
-                if (narrowPosts.size() == 1) {
-                    return narrowPosts;
-                } else {
-                    B2A(posts, narrowPosts, laneAlleyPosts, laneOrAlleyPosts, boundaryPosts, dgBoundaryPosts);
-                }
-            } else if (!dgBoundaryPosts.isEmpty()) {
-                if (boundaryPosts.size() == 1) {
-                    return boundaryPosts;
-                } else {
-                    B2A(posts, dgBoundaryPosts, laneAlleyPosts, laneOrAlleyPosts, boundaryPosts);
-                }
-            } else if (!boundaryPosts.isEmpty()) {
-                if (boundaryPosts.size() == 1) {
-                    return boundaryPosts;
-                } else {
-                    B2A(posts, boundaryPosts, laneAlleyPosts, laneOrAlleyPosts, dgBoundaryPosts);
-                }
-            } else {
-                //沒有一個公式符合，返回
-                return narrowPosts;
-            }
-            //以附號進行測試
-            if (partialNumber > 0) {
-                for (Post5 post : posts) {
-                    if (post.getParnums() != null && post.getParnume() != null
-                            && partialNumber >= post.getParnums() && partialNumber <= post.getParnume()) {
-                        narrowPosts.add(post);
+                    } else if (!narrowZips.isEmpty()) {
+                        return distinct(narrowZips);
+                    } else {
+                        return distinct(boundryZips);
                     }
                 }
-                if (narrowPosts.size() == 1) {
-                    return narrowPosts;
-                } else if (!narrowPosts.isEmpty()) {
-                    B2A(posts, narrowPosts);
-                }
             }
-            //以樓層進行測試
-            if (floor != 0) {
-                for (Post5 post : posts) {
-                    if (post.getFloors() != null && post.getFloore() != null
-                            && floor >= post.getFloors() && floor <= post.getFloore()) {
-                        narrowPosts.add(post);
-                    }
-                }
-                if (narrowPosts.size() == 1) {
-                    return narrowPosts;
-                } else if (!narrowPosts.isEmpty()) {
-                    B2A(posts, narrowPosts);
-                }
-            }
-            narrowPosts.clear();
-            //以符合長度最長者(剩餘最少者)為優先
-            String src = posts.get(0).getRemark();
-            int minlen = src.length();
-            //找出剩餘最少者
-            for (int i = 1; i < posts.size(); i++) {
-                if (posts.get(i).getRemark().length() <= minlen) {
-                    minlen = posts.get(i).getRemark().length();
-                }
-            }
-            for (Post5 post : posts) {
-                if (post.getRemark().length() == minlen) {
-                    narrowPosts.add(post);
-                }
-            }
-            if (narrowPosts.size() == 1) {
-                return narrowPosts;
-            } else if (!narrowPosts.isEmpty()) {
-                B2A(posts, narrowPosts);
-            }
-            //以段進行測試
-            if (section > 0) {
-                for (Post5 post : posts) {
-                    if (post.getSec() == section) {
-                        narrowPosts.add(post);
-                    }
-                }
-                if (narrowPosts.size() == 1) {
-                    return narrowPosts;
-                } else if (!narrowPosts.isEmpty()) {
-                    B2A(posts, narrowPosts);
-                }
-            }
-            int mc = 0;
-            narrowPosts.clear();
-            for (Post5 post : posts) {
-                post.setRemark(pSpacies.matcher(post.getAddrinfo()).replaceAll(""));
-                if (mc < post.getRemark().length()) {
-                    mc = post.getRemark().length();
-                }
-            }
-            for (Post5 post : posts) {
-                if (post.getRemark().length() == mc) {
-                    narrowPosts.add(post);
-                }
-            }
-            if (narrowPosts.size() == 1) {
-                return narrowPosts;
-            } else {
-                B2A(posts, narrowPosts);
-            }
-            //實在沒辦法，看看是否是同一個郵遞區號
-            if (Post5.distinctZip(posts) != null) {
-                Post5 post = posts.get(0);
-                posts.clear();
-                posts.add(post);
-                return posts;
-            } else {
-                //90003屏東縣屏東市林森路1號 & 90047屏東縣屏東市林森路1巷全
-                if (ln == 0) {
-                    narrowPosts.clear();
-                    for (Post5 post : posts) {
-                        if (post.getLane() == null || post.getLane().isEmpty()) {
-                            narrowPosts.add(post);
-                        }
-                    }
-                }
-                //沒輒，只好回傳
-                return narrowPosts.isEmpty() ? posts : narrowPosts;
-            }
+            return distinct(zips);
         }
+        return Collections.EMPTY_LIST;
     }
 }

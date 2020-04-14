@@ -51,7 +51,7 @@ public class TestIntegration {
         WebElement form =  driver.findElement(By.tagName("form"));
         form.findElement(By.name("addr")).sendKeys("台北市萬華區大理街132之10號");
         form.submit();
-        WebElement zip = driver.findElement(By.xpath("//zipcode"));
-        assertThat("Fail to get My Info", zip.getText(), is(containsString("10801")));
+        WebElement zip = driver.findElement(By.xpath("//td[@id='zipcode']"));
+        assertThat("Fail to get My Info", zip.getText(), is(containsString("108021")));
     }
 }
