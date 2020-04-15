@@ -3,7 +3,7 @@
 
 首先您需要 JDK8 並安裝[Maven](https://maven.apache.org/)，
 
-然後在聯網狀態下執行 mvn jetty:run & 後開啟 [http://localhost:8080/twpost32/](http://localhost:8080/twpost32/) 進行地址查詢郵遞區號
+然後在聯網狀態下(因為會下載資料檔)執行 mvn jetty:run & 後開啟 [http://localhost:8080/twpost32/](http://localhost:8080/twpost32/) 進行地址查詢郵遞區號
 
 ## 說明
 
