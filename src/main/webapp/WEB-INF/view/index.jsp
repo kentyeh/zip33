@@ -63,7 +63,7 @@
                 <table>
                     <tbody>
                         <tr><td>郵遞區號：</td><td colspan="2" class="msg" id="zipcode">${zips[0].zipcode}</td></tr>
-                        <tr><td>街道範圍：</td><td>${cas.village}${cas.road}</td><td>${zips[0].scope}<c:if test="${not empty zips[0].recognition}">(${fn:toUpperCase(zips[0].recognition)})</c:if></td></tr>
+                        <tr><td>街道範圍：</td><td>${cas.road}</td><td>${zips[0].scope}<c:if test="${not empty zips[0].recognition}">(${fn:toUpperCase(zips[0].recognition)})</c:if></td></tr>
                     </tbody>
                 </table>
             </c:if>
@@ -75,7 +75,7 @@
                     </thead>
                     <tbody>
                         <c:forEach var="zip" items="${zips}">
-                            <tr><td class="zip">${zip.zipcode}</td><td>${cas.village}${cas.road}</td><td>${zip.scope}<c:if test="${not empty zip.recognition}">(${fn:toUpperCase(zip.recognition)})</c:if></td></tr>
+                            <tr><td class="zip">${zip.zipcode}</td><td>${cas.road}</td><td>${zip.scope}<c:if test="${not empty zip.recognition}">(${fn:toUpperCase(zip.recognition)})</c:if></td></tr>
                         </c:forEach>
                     </tbody>
                 </table>

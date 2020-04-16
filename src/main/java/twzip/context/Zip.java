@@ -130,7 +130,9 @@ public class Zip implements InitializingBean {
             if (cas == null) {
                 cas = itor.next();
             } else {
-                if (cas.getStreet().contains(itor.next().getStreet())) {
+                Cas curr = itor.next();
+                if (cas.getArea().equals(curr.getArea())
+                        && cas.getStreet().contains(curr.getStreet())) {
                     itor.remove();
                 }
             }
@@ -229,22 +231,26 @@ public class Zip implements InitializingBean {
             address = address.substring(0, m.start()) + address.substring(m.end());
         }
         //街道過濾
-        for (Iterator<Cas> iter = cases.iterator(); iter.hasNext();) {
-            Cas cas = iter.next();
-            if (!address.contains(cas.getStreet())) {
-                iter.remove();
+        if (cases.size() > 1) {
+            for (Iterator<Cas> iter = cases.iterator(); iter.hasNext();) {
+                Cas cas = iter.next();
+                if (!cas.getStreet().isEmpty() && !address.contains(cas.getStreet())) {
+                    iter.remove();
+                }
             }
         }
         //dd段過濾
         m = pSection.matcher(address);
         if (m.find()) {
             int secno = Integer.parseInt(m.group(1), 10);
+            narrowCases = new ArrayList<>();
             for (Iterator<Cas> iter = cases.iterator(); iter.hasNext();) {
                 Cas cas = iter.next();
-                if (cas.getSec() != secno) {
-                    iter.remove();
+                if (cas.getSec() == secno) {
+                    narrowCases.add(cas);
                 }
             }
+            B2A(cases, narrowCases);
             address = address.substring(m.end());
         }
         //若是都沒有就不用玩了
