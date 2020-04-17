@@ -60,13 +60,12 @@ public class Zip implements InitializingBean {
     }
 
     private static final Logger logger = LogManager.getLogger(Zip.class);
-    Pattern pVillageEnd = Pattern.compile("[\\x{9109}\\x{93AE}\\x{6751}\\x{91CC}]$");
-    Pattern pSpacies = Pattern.compile("\\s+");
-    Pattern pNum = Pattern.compile("\\d+");
-    Pattern pEnd = Pattern.compile("^[\\x{865F}\\x{6A13}\\x{5C64}Ff]");//開頭為號或樓
-    Pattern pSection = Pattern.compile("(\\d+)\\x{6BB5}");//xx段
-    Pattern pLn = Pattern.compile("(\\d+)\\x{9130}");//xx鄰
-    Pattern pLi = Pattern.compile("^(\\P{M}{2,}[\\x{91CC}\\x{6751}])[^\\x{8857}]\\p{InCJKUnifiedIdeographs}{2,}");//[里村][^街]
+    private static final Pattern pDigits = Pattern.compile("\\d+");
+    private static final Pattern pEnd = Pattern.compile("^[\\x{865F}\\x{6A13}\\x{5C64}Ff]");//開頭為號或樓
+    private static final Pattern pSection = Pattern.compile("(\\d+)\\x{6BB5}");//xx段
+    private static final Pattern pLane = Pattern.compile("[^\\{4E4B}\\d]?(\\d+\\x{5DF7})");//[^之]xx巷
+    private static final Pattern pLn = Pattern.compile("(\\d+)\\x{9130}");//xx鄰
+    private static final Pattern pNum = Pattern.compile("[^\\{4E4B}\\d]?(\\d+\\x{865F})");//[^之]xx號
 
     private static final Map<String, String> abbrCity = new HashMap<>();
 
@@ -110,18 +109,6 @@ public class Zip implements InitializingBean {
             }
         }
         return zips;
-    }
-
-    public List<Zip33> deFull(List<Zip33> zips) {
-        List<Zip33> others = new ArrayList<>(zips);
-        for (Iterator<Zip33> itor = others.iterator(); itor.hasNext();) {
-            Zip33 zip = itor.next();
-            if (zip.getScope().contains("全") && !zip.getScope().endsWith("附號全")) {
-                itor.remove();
-            }
-        }
-        others = distinct(others);
-        return others.size() == 1 ? others : zips;
     }
 
     public List<Cas> deLike(List<Cas> cases) {
@@ -281,6 +268,28 @@ public class Zip implements InitializingBean {
         List<Zip33> zips = new ArrayList<>();
         for (Cas cas : cases) {
             List<Zip33> qrys = findZip33(cas, address);
+            List<Zip33> sinkZips = new ArrayList<>();
+            if (qrys.size() > 1) {
+                for (Zip33 zip : qrys) {
+                    m = pLane.matcher(zip.getScope());
+                    while (m.find() && address.contains(m.group(1))) {
+                        sinkZips.add(zip);
+                        break;
+                    }
+                }
+                if (sinkZips.isEmpty()) {
+                    for (Zip33 zip : qrys) {
+                        m = pNum.matcher(zip.getScope());
+                        while (m.find() && address.contains(m.group(1))) {
+                            sinkZips.add(zip);
+                            break;
+                        }
+                    }
+                }
+                if (!sinkZips.isEmpty()) {
+                    B2A(qrys, sinkZips);
+                }
+            }
             for (Zip33 zip : qrys) {
                 zip.setCas(cas);
                 zips.add(zip);
@@ -294,7 +303,7 @@ public class Zip implements InitializingBean {
         if (zips.size() > 1) {
             //找大宗段,應避免像"松江路" "雙 190號至 192號" 的大宗段為"松江"
             String bigAddr = address;
-            Matcher m = pNum.matcher(address);
+            Matcher m = pDigits.matcher(address);
             while (m.find()) {
                 bigAddr = address.substring(m.end());
             }

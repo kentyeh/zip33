@@ -68,6 +68,8 @@ public class TestDefaultController extends AbstractTestNGSpringContextTests {
     @DataProvider(name = "addrs", parallel = false)
     public String[][] addrs() {
         String[][] res = new String[15][2];
+        res[0][0] = "806029";
+        res[0][1] = "高雄市前鎮區翠亨北路399巷1號";
         res[1][0] = "407009";
         res[1][1] = "臺中市西屯區福林里008鄰西屯路三段１５９之１１巷９弄６號九樓之１";
         res[2][0] = "833171";
@@ -81,7 +83,7 @@ public class TestDefaultController extends AbstractTestNGSpringContextTests {
         res[6][0] = "356003";
         res[6][1] = "苗栗縣後龍鎮埔頂里中心路98號";
         res[7][0] = "972003";
-        res[7][1] = "花蓮縣秀林鄉崇德村3鄰210號";
+        res[7][1] = "花蓮縣秀林鄉崇德村3鄰崇德210號";
         res[8][0] = "100040";
         res[8][1] = "臺北市中正區板溪里001鄰牯嶺街９５巷２號七樓之１";
         res[9][0] = "506016";
@@ -103,7 +105,7 @@ public class TestDefaultController extends AbstractTestNGSpringContextTests {
     public void testZip1(String zipcode, String addr) throws Exception {
         logger.debug("測試{}:{}", zipcode, addr);
         MvcResult mvcResult = mockMvc.perform(post("/").param("addr", addr)).andExpect(request().asyncStarted())
-                .andExpect(request().asyncStarted()).andExpect(request().asyncResult(is(not(isEmptyOrNullString())))).andReturn();
+                .andExpect(request().asyncStarted()).andExpect(request().asyncResult(not(emptyOrNullString()))).andReturn();
         List<Zip33> zips = (List<Zip33>) mvcResult.getRequest().getAttribute("zips");
         assertThat("Error zip.", zips, is(hasSize(1)));
         assertThat("Error zip.", zips.get(0).getZipcode(), is(equalTo(zipcode)));
@@ -124,5 +126,4 @@ public class TestDefaultController extends AbstractTestNGSpringContextTests {
         List<Zip33> zips = (List<Zip33>) mvcResult.getRequest().getAttribute("zips");
         assertThat("Error zip.", zips, anyOf(nullValue(), empty()));
     }
-
 }

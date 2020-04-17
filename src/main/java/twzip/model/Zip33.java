@@ -108,7 +108,9 @@ public class Zip33 implements Serializable {
     }
 
     public Float getParnumRng() {
-        if (this.parnums == null) {
+        if ("單全".equals(scope) || "雙全".equals(scope) || "全".equals(scope)) {
+            return Float.MAX_VALUE;
+        } else if (this.parnums == null) {
             return null;
         } else {
             BigDecimal s = BigDecimal.valueOf(this.parnums).setScale(3, RoundingMode.HALF_UP);
@@ -187,7 +189,8 @@ public class Zip33 implements Serializable {
     }
 
     public boolean isSinkable() {
-        return lane != null || alley != null || parnums != null || floors != null;
+        return lane != null || alley != null || parnums != null || floors != null
+                || "單全".equals(scope) || "雙全".equals(scope) || "全".equals(scope);
     }
 
     public Cas getCas() {
