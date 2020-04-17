@@ -238,6 +238,21 @@ public class Zip implements InitializingBean {
                     iter.remove();
                 }
             }
+            //可能碰到Empty Street的尷尬
+            if (cases.size() > 1) {
+                narrowCases = new ArrayList<>();
+                for (Cas cas : cases) {
+                    if (!cas.getStreet().isEmpty()) {
+                        narrowCases.add(cas);
+                    }
+                    if (narrowCases.size() > 1) {
+                        break;
+                    }
+                }
+                if (narrowCases.size() == 1) {
+                    B2A(cases, narrowCases);
+                }
+            }
         }
         //dd段過濾
         m = pSection.matcher(address);
