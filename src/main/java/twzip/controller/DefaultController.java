@@ -45,7 +45,6 @@ public class DefaultController {
             } else {
                 List<Zip33> zips = zip.getZip33(addr);
                 if (!zips.isEmpty()) {
-                    request.setAttribute("cas", dao.findCasById(zips.get(0).getCasid()));
                     request.setAttribute("zips", zips);
                 }
             }

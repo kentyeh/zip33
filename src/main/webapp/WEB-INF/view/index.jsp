@@ -30,9 +30,14 @@
             }
             .title{
                 margin-top:8px;
-                color:blue;
                 font-size:16px;
                 font-weight:bold;
+            }
+            .addr {
+                color:blue;
+            }
+            td,th{
+               text-align:left;
             }
         </style>
         <script type="text/javascript">
@@ -52,34 +57,24 @@
             <input type="submit" value="查 詢" />
         </form>
         <c:if test="${'POST' eq pageContext.request.method}">
-            <c:if test="${not empty message}">
-                <div class="msg">${message}</div>
-            </c:if>
-                <div class="title">查詢地址：${param.addr}</div>
-            <c:if test="${empty zips}">
-                <div class="msg">找不到對應的資料，請查明地址是否正確</div>
-            </c:if>
-            <c:if test="${fn:length(zips) eq 1}">
-                <table>
-                    <tbody>
-                        <tr><td>郵遞區號：</td><td colspan="2" class="msg" id="zipcode">${zips[0].zipcode}</td></tr>
-                        <tr><td>街道範圍：</td><td>${cas.road}</td><td>${zips[0].scope}<c:if test="${not empty zips[0].recognition}">(${fn:toUpperCase(zips[0].recognition)})</c:if></td></tr>
-                    </tbody>
-                </table>
-            </c:if>
-            <c:if test="${fn:length(zips) gt 1}">
-                <table>
-                    <thead>
-                        <tr><th colspan="3">有以下幾種可能：</th></tr>
-                        <tr><th>郵遞區號</th><th colspan="2">地　　區</th></tr>
-                    </thead>
-                    <tbody>
-                        <c:forEach var="zip" items="${zips}">
-                            <tr><td class="zip">${zip.zipcode}</td><td>${cas.road}</td><td>${zip.scope}<c:if test="${not empty zip.recognition}">(${fn:toUpperCase(zip.recognition)})</c:if></td></tr>
-                        </c:forEach>
-                    </tbody>
-                </table>
-            </c:if>
+            <table style="border: none;border-collapse: collapse;">
+                <thead>
+                    <tr><th class="title">查詢地址：</th><th class="title addr" colspan="2">${param.addr}</th></tr>
+                    <c:if test="${fn:length(zips) gt 1}"><tr><th colspan="3">有以下幾種可能：</th></tr></c:if>
+                </thead><tbody>
+                <c:if test="${not empty message}">
+                    <tr><td colspan="3" class="msg">${message}</td></tr>
+                  <div class="msg">${message}</div>
+                </c:if>
+                <c:if test="${fn:length(zips) eq 1}">
+                    <tr><td>郵遞區號：</td><td colspan="2" class="msg" id="zipcode">${zips[0].zipcode}</td></tr>
+                    <tr><td>街道範圍：</td><td>${zips[0].cas.road}</td><td>${zips[0].scope}<c:if test="${not empty zips[0].recognition}">(${fn:toUpperCase(zips[0].recognition)})</c:if></td></tr>
+                </c:if>
+                <c:if test="${fn:length(zips) gt 1}"><c:forEach var="zip" items="${zips}">
+                    <tr><td class="zip">${zip.zipcode}</td><td>${zip.cas.area} ${zip.cas.road}</td><td>${zip.scope}<c:if test="${not empty zip.recognition}">(${fn:toUpperCase(zip.recognition)})</c:if></td></tr>
+                </c:forEach></c:if>
+                </tbody>
+            </table>
         </c:if>
     </body>
 </html>

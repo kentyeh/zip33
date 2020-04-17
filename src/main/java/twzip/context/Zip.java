@@ -257,122 +257,130 @@ public class Zip implements InitializingBean {
         if (cases.isEmpty()) {
             return Collections.EMPTY_LIST;
         }
-        List<Zip33> sinkZips = new ArrayList<>();
         if (cases.size() > 1) {
             Collections.sort(cases, (o1, o2) -> {
                 return o2.getStreet().length() - o1.getStreet().length();
             });
             deLike(cases);
         }
-        if (cases.size() == 1) {
-            List<Zip33> zips = dao.findZipByCas(cases.get(0));
-            if (zips.size() > 1) {
-                //找大宗段,應避免像"松江路" "雙 190號至 192號" 的大宗段為"松江"
-                String bigAddr = address;
-                m = pNum.matcher(address);
-                while (m.find()) {
-                    bigAddr = address.substring(m.end());
+        List<Zip33> zips = new ArrayList<>();
+        for (Cas cas : cases) {
+            List<Zip33> qrys = findZip33(cas, address);
+            for (Zip33 zip : qrys) {
+                zip.setCas(cas);
+                zips.add(zip);
+            }
+        }
+        return distinct(zips);
+    }
+
+    public List<Zip33> findZip33(Cas cas, String address) {
+        List<Zip33> zips = dao.findZipByCas(cas);
+        if (zips.size() > 1) {
+            //找大宗段,應避免像"松江路" "雙 190號至 192號" 的大宗段為"松江"
+            String bigAddr = address;
+            Matcher m = pNum.matcher(address);
+            while (m.find()) {
+                bigAddr = address.substring(m.end());
+            }
+            bigAddr = pEnd.matcher(bigAddr).find() ? bigAddr.substring(1) : bigAddr;//開頭為號或樓
+            List<Zip33> sinkZips = sinkZips = new ArrayList<>();
+            for (Zip33 zip : zips) {
+                if (!zip.getRecognition().isEmpty() && bigAddr.contains(zip.getRecognition())) {
+                    sinkZips.add(zip);
                 }
-                bigAddr = pEnd.matcher(bigAddr).find() ? bigAddr.substring(1) : bigAddr;//開頭為號或樓
+            }
+            if (!sinkZips.isEmpty()) {
+                B2A(zips, sinkZips);
                 sinkZips = new ArrayList<>();
-                for (Zip33 zip : zips) {
-                    if (!zip.getRecognition().isEmpty() && bigAddr.contains(zip.getRecognition())) {
-                        sinkZips.add(zip);
-                    }
-                }
-                if (!sinkZips.isEmpty()) {
-                    B2A(zips, sinkZips);
-                    sinkZips = new ArrayList<>();
-                }
-                Address paddr = ctx.getBean(Address.class, address);
-                if (zips.size() > 1) {
-                    if (!paddr.getBuild().isEmpty()) {
-                        for (Iterator<Zip33> itor = zips.iterator(); itor.hasNext();) {
-                            if (!itor.next().getExpress().contains("build")) {
-                                itor.remove();
-                            }
+            }
+            Address paddr = ctx.getBean(Address.class, address);
+            if (zips.size() > 1) {
+                if (!paddr.getBuild().isEmpty()) {
+                    for (Iterator<Zip33> itor = zips.iterator(); itor.hasNext();) {
+                        if (!itor.next().getExpress().contains("build")) {
+                            itor.remove();
                         }
-                    }
-                }
-                if (zips.size() > 1) {
-                    List<Zip33> narrowZips = new ArrayList<>(zips.size());
-                    List<Zip33> boundryZips = new ArrayList<>(zips.size());
-                    for (Zip33 zip : zips) {
-                        Expression exp = null;
-                        try {
-                            exp = spel.parseExpression(zip.getExpress());
-                            rootAddr.assign(paddr);
-                            if (Boolean.TRUE.equals(exp.getValue(spelCtx, Boolean.class))) {
-                                narrowZips.add(zip);
-                                boolean sink = zip.isSinkable();
-                                if (sink) {
-                                    sink = sink && (zip.getLane() == null || zip.getLane() == paddr.getLanef());
-                                    sink = sink && (zip.getAlley() == null || zip.getAlley() == paddr.getAlleyf());
-                                    sink = sink && (zip.getParnums() == null || (zip.getParnums() <= paddr.getNumberf() && paddr.getNumberf() <= zip.getParnume()));
-                                    sink = sink && (zip.getFloors() == null || (zip.getFloors() <= paddr.getFloor() && paddr.getFloor() <= zip.getFloore()));
-                                    if (sink) {
-                                        sinkZips.add(zip);
-                                    }
-                                }
-                            }
-                            if (paddr.canDowngrade()) {
-                                rootAddr.assign(paddr.downgrade());
-                                if (Boolean.TRUE.equals(exp.getValue(spelCtx, Boolean.class))) {
-                                    boundryZips.add(zip);
-                                }
-                            }
-                        } catch (SpelParseException ex) {
-                            logger.error(ex.getMessage(), ex);
-                            break;
-                        }
-                    }
-                    if (!sinkZips.isEmpty()) {
-                        zips = distinct(sinkZips);
-                        sinkZips = new ArrayList<>();
-                        for (Zip33 zip : zips) {
-                            if (zip.getParnumRng() != null || zip.getFloorRng() != null) {
-                                sinkZips.add(zip);
-                            }
-                        }
-                        if (sinkZips.isEmpty()) {
-                            return zips;
-                        } else {
-                            if (sinkZips.size() == 1) {
-                                return sinkZips;
-                            } else {
-                                zips = new ArrayList<>(sinkZips);
-                                Collections.sort(zips, (z1, z2) -> {
-                                    return z1.compareRng(z2);
-                                });
-                                sinkZips = new ArrayList<>();
-                                Zip33 target = null;
-                                for (Zip33 zip : zips) {
-                                    if (sinkZips.isEmpty()) {
-                                        sinkZips.add(zip);
-                                        target = zip;
-                                    } else {
-                                        int c = target.compareRng(zip);
-                                        if (c == 0) {
-                                            sinkZips.add(zip);
-                                        } else if (c > 0) {
-                                            sinkZips.clear();
-                                            sinkZips.add(zip);
-                                            target = zip;
-                                        }
-                                    }
-                                }
-                                return sinkZips.isEmpty() ? zips : sinkZips;
-                            }
-                        }
-                    } else if (!narrowZips.isEmpty()) {
-                        return distinct(narrowZips);
-                    } else {
-                        return distinct(boundryZips);
                     }
                 }
             }
-            return distinct(zips);
+            if (zips.size() > 1) {
+                List<Zip33> narrowZips = new ArrayList<>(zips.size());
+                List<Zip33> boundryZips = new ArrayList<>(zips.size());
+                for (Zip33 zip : zips) {
+                    Expression exp = null;
+                    try {
+                        exp = spel.parseExpression(zip.getExpress());
+                        rootAddr.assign(paddr);
+                        if (Boolean.TRUE.equals(exp.getValue(spelCtx, Boolean.class))) {
+                            narrowZips.add(zip);
+                            boolean sink = zip.isSinkable();
+                            if (sink) {
+                                sink = sink && (zip.getLane() == null || zip.getLane() == paddr.getLanef());
+                                sink = sink && (zip.getAlley() == null || zip.getAlley() == paddr.getAlleyf());
+                                sink = sink && (zip.getParnums() == null || (zip.getParnums() <= paddr.getNumberf() && paddr.getNumberf() <= zip.getParnume()));
+                                sink = sink && (zip.getFloors() == null || (zip.getFloors() <= paddr.getFloor() && paddr.getFloor() <= zip.getFloore()));
+                                if (sink) {
+                                    sinkZips.add(zip);
+                                }
+                            }
+                        }
+                        if (paddr.canDowngrade()) {
+                            rootAddr.assign(paddr.downgrade());
+                            if (Boolean.TRUE.equals(exp.getValue(spelCtx, Boolean.class))) {
+                                boundryZips.add(zip);
+                            }
+                        }
+                    } catch (SpelParseException ex) {
+                        logger.error(ex.getMessage(), ex);
+                        break;
+                    }
+                }
+                if (!sinkZips.isEmpty()) {
+                    zips = distinct(sinkZips);
+                    sinkZips = new ArrayList<>();
+                    for (Zip33 zip : zips) {
+                        if (zip.getParnumRng() != null || zip.getFloorRng() != null) {
+                            sinkZips.add(zip);
+                        }
+                    }
+                    if (sinkZips.isEmpty()) {
+                        return zips;
+                    } else {
+                        if (sinkZips.size() == 1) {
+                            return sinkZips;
+                        } else {
+                            zips = new ArrayList<>(sinkZips);
+                            Collections.sort(zips, (z1, z2) -> {
+                                return z1.compareRng(z2);
+                            });
+                            sinkZips = new ArrayList<>();
+                            Zip33 target = null;
+                            for (Zip33 zip : zips) {
+                                if (sinkZips.isEmpty()) {
+                                    sinkZips.add(zip);
+                                    target = zip;
+                                } else {
+                                    int c = target.compareRng(zip);
+                                    if (c == 0) {
+                                        sinkZips.add(zip);
+                                    } else if (c > 0) {
+                                        sinkZips.clear();
+                                        sinkZips.add(zip);
+                                        target = zip;
+                                    }
+                                }
+                            }
+                            return sinkZips.isEmpty() ? zips : sinkZips;
+                        }
+                    }
+                } else if (!narrowZips.isEmpty()) {
+                    return narrowZips;
+                } else {
+                    return boundryZips;
+                }
+            }
         }
-        return Collections.EMPTY_LIST;
+        return zips;
     }
 }

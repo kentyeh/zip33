@@ -67,39 +67,35 @@ public class TestDefaultController extends AbstractTestNGSpringContextTests {
 
     @DataProvider(name = "addrs", parallel = false)
     public String[][] addrs() {
-        String[][] res = new String[1][2];
-        res[0][0] = "972003";
-        res[0][1] = "花蓮縣秀林鄉崇德村3鄰210號";
-//        res[0][0] = "108021";
-//        res[0][1] = "台北市萬華區大理街132之10號";
-//        res[1][0] = "407009";
-//        res[1][1] = "臺中市西屯區福林里008鄰西屯路三段１５９之１１巷９弄６號九樓之１";
-//        res[2][0] = "833171";
-//        res[2][1] = "高雄市鳥松區鳥松里009鄰松埔路１巷１０號";
-//        res[3][0] = "407009";
-//        res[3][1] = "臺中市西屯區福雅里023鄰西屯路三段１５１之７之１號";
-//        res[4][0] = "406047";
-//        res[4][1] = "臺中市北屯區松強里001鄰昌平路二段１２之１５巷１６號";
-//        res[5][0] = "542024";
-//        res[5][1] = "南投縣草屯鎮土城里003鄰中正路２１７之１２之１巷３８號";
-//        res[6][0] = "356003";
-//        res[6][1] = "苗栗縣後龍鎮埔頂里中心路98號";
-//        res[7][0] = "972003";
-//        res[7][1] = "花蓮縣秀林鄉崇德村3鄰210號";
-//        res[8][0] = "100040";
-//        res[8][1] = "臺北市中正區板溪里001鄰牯嶺街９５巷２號七樓之１";
-//        res[9][0] = "506016";
-//        res[9][1] = "彰化縣福興鄉外埔村復興路30-11號";
-//        res[10][0] = "106219";
-//        res[10][1] = "臺北市中正區羅斯福路四段７４號地下一層";
-//        res[11][0] = "114064";
-//        res[11][1] = "臺北市內湖區堤頂大道２段13號";
-//        res[12][0] = "324009";
-//        res[12][1] = "桃園市平鎮區復旦路二段211巷49號";//因為有無段復旦路
-//        res[13][0] = "249652";
-//        res[13][1] = "新北市八里區商港六路53號9樓";//因為有無段復旦路
-//        res[14][0] = "827012";
-//        res[14][1] = "高雄市彌陀區南寮路光華巷30號";//因為南寮路有無巷也有奇怪的巷
+        String[][] res = new String[15][2];
+        res[1][0] = "407009";
+        res[1][1] = "臺中市西屯區福林里008鄰西屯路三段１５９之１１巷９弄６號九樓之１";
+        res[2][0] = "833171";
+        res[2][1] = "高雄市鳥松區鳥松里009鄰松埔路１巷１０號";
+        res[3][0] = "407009";
+        res[3][1] = "臺中市西屯區福雅里023鄰西屯路三段１５１之７之１號";
+        res[4][0] = "406047";
+        res[4][1] = "臺中市北屯區松強里001鄰昌平路二段１２之１５巷１６號";
+        res[5][0] = "542024";
+        res[5][1] = "南投縣草屯鎮土城里003鄰中正路２１７之１２之１巷３８號";
+        res[6][0] = "356003";
+        res[6][1] = "苗栗縣後龍鎮埔頂里中心路98號";
+        res[7][0] = "972003";
+        res[7][1] = "花蓮縣秀林鄉崇德村3鄰210號";
+        res[8][0] = "100040";
+        res[8][1] = "臺北市中正區板溪里001鄰牯嶺街９５巷２號七樓之１";
+        res[9][0] = "506016";
+        res[9][1] = "彰化縣福興鄉外埔村復興路30-11號";
+        res[10][0] = "106219";
+        res[10][1] = "臺北市中正區羅斯福路四段７４號地下一層";
+        res[11][0] = "114064";
+        res[11][1] = "臺北市內湖區堤頂大道２段13號";
+        res[12][0] = "324009";
+        res[12][1] = "桃園市平鎮區復旦路二段211巷49號";//因為有無段復旦路
+        res[13][0] = "249652";
+        res[13][1] = "新北市八里區商港六路53號9樓";//因為有無段復旦路
+        res[14][0] = "827012";
+        res[14][1] = "高雄市彌陀區南寮路光華巷30號";//因為南寮路有無巷也有奇怪的巷
         return res;
     }
 
@@ -113,7 +109,7 @@ public class TestDefaultController extends AbstractTestNGSpringContextTests {
         assertThat("Error zip.", zips.get(0).getZipcode(), is(equalTo(zipcode)));
     }
 
-    /*@Test
+    @Test
     public void testZip2() throws Exception {
         MvcResult mvcResult = mockMvc.perform(post("/").param("addr", "花蓮縣鳳林鎮信義路248號")).andExpect(request().asyncStarted())
                 .andExpect(request().asyncStarted()).andExpect(request().asyncResult(not(is(emptyOrNullString())))).andReturn();
@@ -127,6 +123,6 @@ public class TestDefaultController extends AbstractTestNGSpringContextTests {
                 .andExpect(request().asyncStarted()).andExpect(request().asyncResult(not(is(emptyOrNullString())))).andReturn();
         List<Zip33> zips = (List<Zip33>) mvcResult.getRequest().getAttribute("zips");
         assertThat("Error zip.", zips, anyOf(nullValue(), empty()));
-    }*/
+    }
 
 }

@@ -30,6 +30,8 @@ public class Zip33 implements Serializable {
     private String express;
     private String boundary;
 
+    private Cas cas;
+
     public Zip33() {
     }
 
@@ -188,6 +190,14 @@ public class Zip33 implements Serializable {
         return lane != null || alley != null || parnums != null || floors != null;
     }
 
+    public Cas getCas() {
+        return cas;
+    }
+
+    public void setCas(Cas cas) {
+        this.cas = cas;
+    }
+
     public static class Zip33Mapper implements RowMapper<Zip33> {
 
         @Override
@@ -199,13 +209,13 @@ public class Zip33 implements Serializable {
             res.setRecognition(rs.getString("recognition"));
             res.setScope(rs.getString("scope"));
             BigDecimal bdv = rs.getBigDecimal("lane");
-            res.setLane(bdv == null ? null : bdv.setScale(3,RoundingMode.HALF_UP).floatValue());
+            res.setLane(bdv == null ? null : bdv.setScale(3, RoundingMode.HALF_UP).floatValue());
             bdv = rs.getBigDecimal("alley");
-            res.setAlley(bdv == null ? null : bdv.setScale(3,RoundingMode.HALF_UP).floatValue());
+            res.setAlley(bdv == null ? null : bdv.setScale(3, RoundingMode.HALF_UP).floatValue());
             bdv = rs.getBigDecimal("parnums");
-            res.setParnums(bdv == null ? null : bdv.setScale(3,RoundingMode.HALF_UP).floatValue());
+            res.setParnums(bdv == null ? null : bdv.setScale(3, RoundingMode.HALF_UP).floatValue());
             bdv = rs.getBigDecimal("parnume");
-            res.setParnume(bdv == null ? null : bdv.setScale(3,RoundingMode.HALF_UP).floatValue());
+            res.setParnume(bdv == null ? null : bdv.setScale(3, RoundingMode.HALF_UP).floatValue());
             int iv = rs.getInt("floors");
             res.setFloors(rs.wasNull() ? null : iv);
             iv = rs.getInt("floore");

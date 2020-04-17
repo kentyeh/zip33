@@ -20,10 +20,6 @@ public interface Dao extends SqlObject,AutoCloseable {
     @SqlQuery("SELECT * FROM zipcas WHERE area like :area||'%'")
     @RegisterRowMapper(Cas.CasMapper.class)
     List<Cas> findCasByArea(@Bind("area") String area);
-
-    @SqlQuery("SELECT * FROM zipcas WHERE casid= :casid")
-    @RegisterRowMapper(Cas.CasMapper.class)
-    Cas findCasById(@Bind("casid") long casid);
     
     @SqlQuery("select * from village WHERE city like :city||'%'")
     @RegisterRowMapper(Village.VillageMapper.class)
