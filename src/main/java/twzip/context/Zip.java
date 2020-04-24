@@ -63,9 +63,9 @@ public class Zip implements InitializingBean {
     private static final Pattern pDigits = Pattern.compile("\\d+");
     private static final Pattern pEnd = Pattern.compile("^[\\x{865F}\\x{6A13}\\x{5C64}Ff]");//開頭為號或樓
     private static final Pattern pSection = Pattern.compile("(\\d+)\\x{6BB5}");//xx段
-    private static final Pattern pLane = Pattern.compile("[^\\{4E4B}\\d]?(\\d+\\x{5DF7})");//[^之]xx巷
+    private static final Pattern pLane = Pattern.compile("[^\\x{4E4B}\\d]?(\\d+\\x{5DF7})");//[^之]xx巷
     private static final Pattern pLn = Pattern.compile("(\\d+)\\x{9130}");//xx鄰
-    private static final Pattern pNum = Pattern.compile("[^\\{4E4B}\\d]?(\\d+\\x{865F})");//[^之]xx號
+    private static final Pattern pNum = Pattern.compile("[^\\x{4E4B}\\d]?(\\d+\\x{865F})");//[^之]xx號
 
     private static final Map<String, String> abbrCity = new HashMap<>();
 
@@ -219,26 +219,22 @@ public class Zip implements InitializingBean {
         }
         //街道過濾
         if (cases.size() > 1) {
+            narrowCases = new ArrayList<>();
             for (Iterator<Cas> iter = cases.iterator(); iter.hasNext();) {
                 Cas cas = iter.next();
                 if (!cas.getStreet().isEmpty() && !address.contains(cas.getStreet())) {
                     iter.remove();
-                }
-            }
-            //可能碰到Empty Street的尷尬
-            if (cases.size() > 1) {
-                narrowCases = new ArrayList<>();
-                for (Cas cas : cases) {
-                    if (!cas.getStreet().isEmpty()) {
+                } else if (!cas.getVillage().isEmpty() && !address.contains(cas.getVillage())) {
+                    iter.remove();
+                } else if (!cas.getStreet().isEmpty()){
+                    Pattern Pvil = Pattern.compile(cas.getStreet()+"[\\x{6751}\\x{91CC}]");//避免-台南市白河區蓮潭里中山路24號
+                    if(!Pvil.matcher(address).find()){
                         narrowCases.add(cas);
                     }
-                    if (narrowCases.size() > 1) {
-                        break;
-                    }
                 }
-                if (narrowCases.size() == 1) {
-                    B2A(cases, narrowCases);
-                }
+            }
+            if (cases.size() > 1 && !narrowCases.isEmpty()) {
+                B2A(cases, narrowCases);
             }
         }
         //dd段過濾

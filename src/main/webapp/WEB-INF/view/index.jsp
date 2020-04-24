@@ -52,6 +52,7 @@
     <body onload="doOnload()">
         <div class="header">3+3碼郵遞區號速查 請輸入地址</div>
         <form action="${pageContext.request.contextPath}/" method="post" onsubmit="return doSubmit(this)">
+            <div><input type="checkbox" id="mapsearch" name="mapsearch" value="Y"${'Y' eq param.mapsearch?' checked':''}/><label for="mapsearch">查無時上網找接近地址</label></div>
             <input type="text" name="addr" placeholder="輸入地址，如'台北市萬華區大理街132之10號','花蓮縣鳳林鎮信義路249號'等" 
                    value="${param.addr}" onfocus="select()" autofocus required/>
             <input type="submit" value="查 詢" />
@@ -61,10 +62,10 @@
                 <thead>
                     <tr><th class="title">查詢地址：</th><th class="title addr" colspan="2">${param.addr}</th></tr>
                     <c:if test="${fn:length(zips) gt 1}"><tr><th colspan="3">有以下幾種可能：</th></tr></c:if>
+                    <c:if test="${not empty alternatives}"><tr><th colspan="3">其它可能地址(最多十筆)：</th></tr></c:if>
                 </thead><tbody>
                 <c:if test="${not empty message}">
                     <tr><td colspan="3" class="msg">${message}</td></tr>
-                  <div class="msg">${message}</div>
                 </c:if>
                 <c:if test="${fn:length(zips) eq 1}">
                     <tr><td>郵遞區號：</td><td colspan="2" class="msg" id="zipcode">${zips[0].zipcode}</td></tr>
@@ -72,6 +73,9 @@
                 </c:if>
                 <c:if test="${fn:length(zips) gt 1}"><c:forEach var="zip" items="${zips}">
                     <tr><td class="zip">${zip.zipcode}</td><td>${zip.cas.area} ${zip.cas.road}</td><td>${zip.scope}<c:if test="${not empty zip.recognition}">(${fn:toUpperCase(zip.recognition)})</c:if></td></tr>
+                </c:forEach></c:if>
+                <c:if test="${not empty alternatives}"><c:forEach var="addr" items="${alternatives}">
+                    <tr><td colspan="3">${addr}</td></tr>
                 </c:forEach></c:if>
                 </tbody>
             </table>
