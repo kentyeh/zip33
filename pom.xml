@@ -24,7 +24,7 @@
         <tidy.version>r938</tidy.version>
         <maven.test.skip>false</maven.test.skip>
         <context.path>${project.artifactId}</context.path>
-        <log4j.version>2.13.1</log4j.version>
+        <log4j.version>2.13.3</log4j.version>
         <disruptor.version>3.4.2</disruptor.version>
         <pmd.version>3.12.0</pmd.version>
         <findbugs.version>3.0.5</findbugs.version>
