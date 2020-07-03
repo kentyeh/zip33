@@ -43,6 +43,9 @@ public class DefaultController {
                 List<Zip33> zips = zip.getZip33(addr);
                 if (!zips.isEmpty()) {
                     request.setAttribute("zips", zips);
+                    if (zips.size() > 1) {
+                        request.setAttribute("alternatives", PreDataUtil.mapSearch(addr));
+                    }
                 } else if ("Y".equals(mapsearch)) {
                     request.setAttribute("alternatives", PreDataUtil.mapSearch(addr));
                 }

@@ -119,7 +119,9 @@ public class Zip implements InitializingBean {
             } else {
                 Cas curr = itor.next();
                 if (cas.getArea().equals(curr.getArea())
-                        && cas.getStreet().contains(curr.getStreet())) {
+                        && ((cas.getStreet().equals(curr.getStreet()) && cas.getSec() == curr.getSec())
+                        || (cas.getStreet().contains(curr.getStreet())
+                        && cas.getStreet().length() > curr.getStreet().length()))) {
                     itor.remove();
                 }
             }
