@@ -263,7 +263,7 @@ public class Zip implements InitializingBean {
         }
         if (cases.size() > 1) {
             Collections.sort(cases, (o1, o2) -> {
-                return o1.getLongStreet().length() - o2.getLongStreet().length();
+                return o2.getLongStreet().length() - o1.getLongStreet().length();
             });
             deLike(cases);
         }
