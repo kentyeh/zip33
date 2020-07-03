@@ -119,9 +119,7 @@ public class Zip implements InitializingBean {
             } else {
                 Cas curr = itor.next();
                 if (cas.getArea().equals(curr.getArea())
-                        && ((cas.getStreet().equals(curr.getStreet()) && cas.getSec() == curr.getSec())
-                        || (cas.getStreet().contains(curr.getStreet())
-                        && cas.getStreet().length() > curr.getStreet().length()))) {
+                        && cas.getLongStreet().contains(curr.getLongStreet())) {
                     itor.remove();
                 }
             }
@@ -228,9 +226,9 @@ public class Zip implements InitializingBean {
                     iter.remove();
                 } else if (!cas.getVillage().isEmpty() && !address.contains(cas.getVillage())) {
                     iter.remove();
-                } else if (!cas.getStreet().isEmpty()){
-                    Pattern Pvil = Pattern.compile(cas.getStreet()+"[\\x{6751}\\x{91CC}]");//避免-台南市白河區蓮潭里中山路24號
-                    if(!Pvil.matcher(address).find()){
+                } else if (!cas.getStreet().isEmpty()) {
+                    Pattern Pvil = Pattern.compile(cas.getStreet() + "[\\x{6751}\\x{91CC}]");//避免-台南市白河區蓮潭里中山路24號
+                    if (!Pvil.matcher(address).find()) {
                         narrowCases.add(cas);
                     }
                 }
@@ -244,14 +242,20 @@ public class Zip implements InitializingBean {
         if (m.find()) {
             int secno = Integer.parseInt(m.group(1), 10);
             narrowCases = new ArrayList<>();
-            for (Iterator<Cas> iter = cases.iterator(); iter.hasNext();) {
-                Cas cas = iter.next();
+            for (Cas cas : cases) {
                 if (cas.getSec() == secno) {
                     narrowCases.add(cas);
                 }
             }
             B2A(cases, narrowCases);
             address = address.substring(m.end());
+        } else {//無段則排除段
+            for (Iterator<Cas> iter = cases.iterator(); iter.hasNext();) {
+                Cas cas = iter.next();
+                if (cas.getSec() > 0) {
+                    iter.remove();
+                }
+            }
         }
         //若是都沒有就不用玩了
         if (cases.isEmpty()) {
@@ -259,7 +263,7 @@ public class Zip implements InitializingBean {
         }
         if (cases.size() > 1) {
             Collections.sort(cases, (o1, o2) -> {
-                return o2.getStreet().length() - o1.getStreet().length();
+                return o1.getLongStreet().length() - o2.getLongStreet().length();
             });
             deLike(cases);
         }

@@ -59,6 +59,10 @@ public class Cas implements Serializable {
         return street;
     }
 
+    public String getLongStreet() {
+        return sec == 0 ? street : street + sec + "段";
+    }
+
     public long getSec() {
         return sec;
     }
@@ -72,7 +76,7 @@ public class Cas implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("%d.%s:%s:%s:%s", casid, city, area, village, road);
+        return String.format("%d.%s:%s:%s:%s", casid, city, area, village, getLongStreet());
     }
 
     @Override
