@@ -37,16 +37,17 @@ public class DefaultController {
         return () -> {
             String addr = request.getParameter("addr");
             String mapsearch = request.getParameter("mapsearch");
+            String forrcesearch = request.getParameter("forrcesearch");
             if (addr == null || addr.isEmpty()) {
                 request.setAttribute("message", "地址不可為空");
             } else {
                 List<Zip33> zips = zip.getZip33(addr);
                 if (!zips.isEmpty()) {
                     request.setAttribute("zips", zips);
-                    if (zips.size() > 1) {
+                    if (zips.size() > 1 || "Y".equals(forrcesearch)) {
                         request.setAttribute("alternatives", PreDataUtil.mapSearch(addr));
                     }
-                } else if ("Y".equals(mapsearch)) {
+                } else if ("Y".equals(mapsearch) || "Y".equals(forrcesearch)) {
                     request.setAttribute("alternatives", PreDataUtil.mapSearch(addr));
                 }
             }

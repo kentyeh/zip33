@@ -52,7 +52,10 @@
     <body onload="doOnload()">
         <div class="header">3+3碼郵遞區號速查 請輸入地址</div>
         <form action="${pageContext.request.contextPath}/" method="post" onsubmit="return doSubmit(this)">
-            <div><input type="checkbox" id="mapsearch" name="mapsearch" value="Y"${'Y' eq param.mapsearch?' checked':''}/><label for="mapsearch">查無時上網找接近地址</label></div>
+            <div>
+                <input type="checkbox" id="mapsearch" name="mapsearch" value="Y"${'Y' eq param.mapsearch?' checked':''}/><label for="mapsearch">查無時上網找接近地址</label>
+                <input type="checkbox" id="forrcesearch" name="forrcesearch" value="Y"${'Y' eq param.forrcesearch?' checked':''}/><label for="forrcesearch">強制上網找接近地址</label>
+            </div>
             <input type="text" name="addr" placeholder="輸入地址，如'台北市萬華區大理街132之10號','花蓮縣鳳林鎮信義路249號'等" 
                    value="${param.addr}" onfocus="select()" autofocus required/>
             <input type="submit" value="查 詢" />

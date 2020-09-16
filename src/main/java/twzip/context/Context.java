@@ -83,6 +83,7 @@ public class Context {
         replaces.put(Pattern.compile("[号]"), "號");
         replaces.put(Pattern.compile("[殻]"), "殼");
         replaces.put(Pattern.compile("[鳯]"), "鳳");
+        replaces.put(Pattern.compile("[衆]"), "眾");
         //<editor-fold defaultstate="collapsed" desc="郵局標準替換(僅第一個字)">
         replaces.put(Pattern.compile("[双]"), "雙");
         replaces.put(Pattern.compile("[邨]"), "屯");
