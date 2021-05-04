@@ -17,15 +17,15 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <maven.compiler.optimize>true</maven.compiler.optimize>
-        <spring.version>5.2.9.RELEASE</spring.version>
+        <spring.version>5.3.6</spring.version>
         <h2.version>1.4.200</h2.version>
-        <jdbi.version>3.14.4</jdbi.version>
+        <jdbi.version>3.20.0</jdbi.version>
         <hc.version>4.5.12</hc.version>
         <tidy.version>r938</tidy.version>
         <maven.test.skip>false</maven.test.skip>
         <context.path>${project.artifactId}</context.path>
-        <log4j.version>2.13.3</log4j.version>
-        <disruptor.version>3.4.2</disruptor.version>
+        <log4j.version>2.14.1</log4j.version>
+        <disruptor.version>3.4.4</disruptor.version>
         <pmd.version>3.13.0</pmd.version>
         <findbugs.version>3.0.5</findbugs.version>
         <jndi.dsname>jdbc/JNDIDS</jndi.dsname>
@@ -127,6 +127,11 @@
             <version>${h2.version}</version> 
         </dependency>
         <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+            <version>2.8.0</version><!--因為JDBI會連到jdk11版本-->
+        </dependency>
+        <dependency>
             <groupId>org.jdbi</groupId>
             <artifactId>jdbi3-core</artifactId>
             <version>${jdbi.version}</version>
@@ -145,13 +150,13 @@
         <dependency>
             <groupId>org.jdbi</groupId>
             <artifactId>jdbi3-spring4</artifactId>
-            <version>${jdbi.version}</version>
+            <version>3.19.0</version>
         </dependency>
         
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-dbcp2</artifactId>
-            <version>2.7.0</version>
+            <version>2.8.0</version>
         </dependency>
 	
         <dependency>
@@ -184,13 +189,13 @@
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
-            <version>7.3.0</version>
+            <version>7.4.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.jayway.jsonpath</groupId>
             <artifactId>json-path</artifactId>
-            <version>2.4.0</version>
+            <version>2.5.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -210,7 +215,7 @@
         <dependency>
             <groupId>org.seleniumhq.selenium</groupId>
             <artifactId>htmlunit-driver</artifactId>
-            <version>2.43.1</version>
+            <version>2.49.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -372,7 +377,7 @@
             <plugin>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-maven-plugin</artifactId>
-                <version>9.4.31.v20200723</version>
+                <version>9.4.39.v20210325</version>
                 <executions>
                     <execution>
                         <id>start-jetty</id>

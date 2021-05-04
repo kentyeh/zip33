@@ -84,6 +84,9 @@ public class Context {
         replaces.put(Pattern.compile("[殻]"), "殼");
         replaces.put(Pattern.compile("[鳯]"), "鳳");
         replaces.put(Pattern.compile("[衆]"), "眾");
+        replaces.put(Pattern.compile("[屛]"), "屏");
+        replaces.put(Pattern.compile("[徳]"), "德");
+        replaces.put(Pattern.compile("[陜]"), "陝");
         //<editor-fold defaultstate="collapsed" desc="郵局標準替換(僅第一個字)">
         replaces.put(Pattern.compile("[双]"), "雙");
         replaces.put(Pattern.compile("[邨]"), "屯");
@@ -174,6 +177,7 @@ public class Context {
         replaces.put(Pattern.compile("[𥔽]"), "塔");
         replaces.put(Pattern.compile("[卧]"), "臥");
         replaces.put(Pattern.compile("[凉]"), "涼");
+        replaces.put(Pattern.compile("\\x{FB56F}"), "塭");//󻕯
         //</editor-fold>
         replaces.put(Pattern.compile("\\x{5730}\\x{4E0B}\\x{6A13}"), "-1樓");//地下樓
         replaces.put(Pattern.compile("\\x{5730}\\x{4E0B}(?=\\d+[\\x{6A13}Ff])"), "-");
